@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
 import { Container, LoginButton, RegisterButton } from '../components/common';
 import Ellipse1 from '../../assets/images/onboardingPage/ellipse1.svg';
 import Ellipse2 from '../../assets/images/onboardingPage/ellipse2.svg';
@@ -20,13 +20,13 @@ export const OnboardingScreen: React.FC<any> = ({ navigation }) => {
 
       {/* Ellipses positioned exactly as in image */}
       <View className="absolute top-0 right-0">
-        <Ellipse1 width={width * 0.5} height={height * 0.5} style={{ position: 'absolute', top: -width * 0.37, right: -width * 0.03}} />
+        <Ellipse1 width={width * 0.5} height={height * 0.5} style={styles.ellipse1} />
       </View>
       <View className="absolute bottom-0 left-0">
-        <Ellipse3 width={width * 0.4} height={width * 0.35} style={{ position: 'absolute', bottom: width * 1.1, left: -width * 0.12 }} />
+        <Ellipse3 width={width * 0.4} height={width * 0.35} style={styles.ellipse3} />
       </View>
       <View className="absolute bottom-0 right-0">
-        <Ellipse2 width={width * 0.45} height={width * 0.65} style={{ position: 'absolute', bottom: width * 0.95, right: -width * 0.02 }} />
+        <Ellipse2 width={width * 0.45} height={width * 0.65} style={styles.ellipse2} />
       </View>
 
       {/* Player image - larger and better positioned */}
@@ -53,7 +53,7 @@ export const OnboardingScreen: React.FC<any> = ({ navigation }) => {
             {`Зови друзей, выбирай время и
 выходи на матч!`}
           </Text>
-          
+
           <LoginButton
             onPress={() => navigation.navigate('Login')}
           />
@@ -65,4 +65,10 @@ export const OnboardingScreen: React.FC<any> = ({ navigation }) => {
       </Container>
     </SafeAreaView>
   );
-}; 
+};
+
+const styles = StyleSheet.create({
+  ellipse1: { position: 'absolute', top: -width * 0.37, right: -width * 0.03 },
+  ellipse2: { position: 'absolute', bottom: width * 0.95, right: -width * 0.02 },
+  ellipse3: { position: 'absolute', bottom: width * 1.1, left: -width * 0.12 },
+}); 

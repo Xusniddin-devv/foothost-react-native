@@ -93,13 +93,13 @@ const InfoCard = ({ icon, label, value }: { icon: React.ReactNode, label: string
 
 // Helper component for amenity items
 const AmenityItem = ({ icon, label, available }: { icon: React.ReactNode, label: string, available: boolean }) => (
-    <View className="flex-row items-center">
-        {icon}
-        <View className="ml-2">
-            <Text className="font-manrope-bold text-xs">{label}</Text>
-            <Text className={`font-manrope-medium text-xs ${available ? 'text-green-600' : 'text-red-600'}`}>{available ? 'Есть' : 'Нет'}</Text>
-        </View>
+  <View className="flex-row items-center">
+    {icon}
+    <View className="ml-2">
+      <Text className="font-manrope-bold text-xs">{label}</Text>
+      <Text className={`font-manrope-medium text-xs ${available ? 'text-green-600' : 'text-red-600'}`}>{available ? 'Есть' : 'Нет'}</Text>
     </View>
+  </View>
 );
 
 export const BookingStep1Screen: React.FC<Props> = ({ navigation }) => {
@@ -116,16 +116,16 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation }) => {
   const handleSubmit = () => {
     // Prevent multiple rapid presses
     if (!selectedTimeSlot || isSubmitting) return;
-    
+
     setIsSubmitting(true);
-    
+
     // Simple, reliable navigation
     try {
       navigation.navigate('BookingStep3');
     } catch (error) {
       console.error('Navigation error:', error);
     }
-    
+
     // Reset submission state after a delay
     setTimeout(() => setIsSubmitting(false), 3000);
   };
@@ -152,9 +152,9 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
         }
       />
-      
+
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        
+
         {/* Image Carousel */}
         <View className="relative">
           <Image source={mockStadium.image} className="w-full h-56" resizeMode="cover" />
@@ -182,8 +182,8 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation }) => {
                 </View>
               </View>
               <View className="items-end">
-                  <Text className="text-black font-artico-medium text-[30px]">{mockStadium.price}</Text>
-                  <Text className="text-gray-500 font-manrope-medium text-xs mt-1">{mockStadium.distance}</Text>
+                <Text className="text-black font-artico-medium text-[30px]">{mockStadium.price}</Text>
+                <Text className="text-gray-500 font-manrope-medium text-xs mt-1">{mockStadium.distance}</Text>
               </View>
             </View>
           </View>
@@ -224,8 +224,7 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation }) => {
                     return (
                       <TouchableOpacity
                         key={slotIndex}
-                        style={{ width: '49%' }}
-                        className={`rounded-lg p-2 items-center justify-center h-16
+                        className={`w-[49%] rounded-lg p-2 items-center justify-center h-16
                           ${!slot.available ? 'bg-gray-100 border border-[#758A80]' : ''}
                           ${slot.available && !isSelected ? 'bg-white border border-green-600' : ''}
                           ${isSelected ? 'bg-primary border border-green-600' : ''}
@@ -239,30 +238,30 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation }) => {
                     );
                   })}
                   {/* Fill empty space if odd number of slots */}
-                  {currentSchedule.slice(rowIndex * 2, rowIndex * 2 + 2).length === 1 && <View style={{ width: '49%' }} />}
+                  {currentSchedule.slice(rowIndex * 2, rowIndex * 2 + 2).length === 1 && <View className="w-[49%]" />}
                 </View>
               ))}
             </View>
           </View>
           {/* 3. Amenities Section (3-Column Layout) */}
           <View className="mb-6">
-              <Text className="font-artico-medium text-xl mb-4">УДОБСТВО:</Text>
-              <View className="flex-row justify-between">
-                  {/* Column 1 */}
-                  <View className="space-y-4">
-                      <AmenityItem icon={<ParkingSvg width={28} height={28}/>} label="Парковка" available={mockStadium.amenities.parking} />
-                      <AmenityItem icon={<ShowerSvg width={28} height={28}/>} label="Душ" available={mockStadium.amenities.shower} />
-                  </View>
-                  {/* Column 2 */}
-                  <View className="space-y-4">
-                      <AmenityItem icon={<OutfitChangeSvg width={28} height={28}/>} label="Раздевалки" available={mockStadium.amenities.locker} />
-                      <AmenityItem icon={<SeatsSvg width={28} height={28}/>} label="Трибуны" available={mockStadium.amenities.tribune} />
-                  </View>
-                  {/* Column 3 */}
-                  <View className="space-y-4">
-                       <AmenityItem icon={<LightedSvg width={28} height={28}/>} label="Освещение" available={mockStadium.amenities.lighting} />
-                  </View>
+            <Text className="font-artico-medium text-xl mb-4">УДОБСТВО:</Text>
+            <View className="flex-row justify-between">
+              {/* Column 1 */}
+              <View className="space-y-4">
+                <AmenityItem icon={<ParkingSvg width={28} height={28} />} label="Парковка" available={mockStadium.amenities.parking} />
+                <AmenityItem icon={<ShowerSvg width={28} height={28} />} label="Душ" available={mockStadium.amenities.shower} />
               </View>
+              {/* Column 2 */}
+              <View className="space-y-4">
+                <AmenityItem icon={<OutfitChangeSvg width={28} height={28} />} label="Раздевалки" available={mockStadium.amenities.locker} />
+                <AmenityItem icon={<SeatsSvg width={28} height={28} />} label="Трибуны" available={mockStadium.amenities.tribune} />
+              </View>
+              {/* Column 3 */}
+              <View className="space-y-4">
+                <AmenityItem icon={<LightedSvg width={28} height={28} />} label="Освещение" available={mockStadium.amenities.lighting} />
+              </View>
+            </View>
           </View>
           {/* Location Section */}
           <View className="mb-32">
@@ -275,9 +274,8 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation }) => {
       {/* Sticky Send Request Button */}
       <View className="absolute bottom-0 left-0 right-0 px-4 pt-2 pb-6">
         <TouchableOpacity
-          className={`rounded-xl py-4 items-center ${
-            selectedTimeSlot && !isSubmitting ? 'bg-primary' : 'bg-gray-300'
-          }`}
+          className={`rounded-xl py-4 items-center ${selectedTimeSlot && !isSubmitting ? 'bg-primary' : 'bg-gray-300'
+            }`}
           onPress={handleSubmit}
           disabled={!selectedTimeSlot || isSubmitting}
           activeOpacity={0.7}
