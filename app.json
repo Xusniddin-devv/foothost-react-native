@@ -14,13 +14,11 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.company.foothost",
-      "newArchEnabled": true
+      "bundleIdentifier": "com.company.foothost"
     },
     "android": {
       "package": "com.company.foothost",
-      "backgroundColor": "#4CAF50",
-      "newArchEnabled": true
+      "backgroundColor": "#4CAF50"
     },
     "web": {
       "bundler": "metro"

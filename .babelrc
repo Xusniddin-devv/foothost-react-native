@@ -1,8 +1,0 @@
-{
-  "presets": ["babel-preset-expo"],
-  "plugins": ["nativewind/babel"],
-  "compact": true,
-  "comments": false,
-  "minified": true,
-  "retainLines": true
-}

@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -39,78 +39,78 @@ const mockClans = [
 ];
 
 export const HomeScreen: React.FC = () => {
-  const [searchValue, setSearchValue] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'location' | 'date' | 'time'>('location');
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      {/* Top Bar */}
-      <Header
-        left={<Logo width={100} height={40} style={{ marginTop: 16 }} />}
-        right={<TouchableOpacity><Bell width={24} height={24} style={{ marginTop: 16 }} /></TouchableOpacity>}
-      />
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Search and Filter Section */}
-        <Container padding="sm">
-          <SearchBar 
-            value={searchValue}
-            onChangeText={setSearchValue}
-            onSearch={() => console.log('Search pressed')}
-          />
-
-          <View className="flex-row">
-            <FilterButton
-              icon="map-marker"
-              text="Ташкент"
-              isActive={selectedFilter === 'location'}
-              activeColor="#45AF31"
-              inactiveColor="#fff"
-              activeTextColor="#fff"
-              inactiveTextColor="#45AF31"
-              activeBorderColor="#45AF31"
-              inactiveBorderColor="#45AF31"
-              iconColor="#45AF31"
-              activeIconColor="#fff"
-              onPress={() => setSelectedFilter('location')}
-              className="mr-2"
-            />
-            <FilterButton
-              icon="calendar"
-              text="00/00/2026"
-              isActive={selectedFilter === 'date'}
-              activeColor="#45AF31"
-              inactiveColor="#fff"
-              activeTextColor="#fff"
-              inactiveTextColor="#45AF31"
-              activeBorderColor="#45AF31"
-              inactiveBorderColor="#45AF31"
-              iconColor="#45AF31"
-              activeIconColor="#fff"
-              onPress={() => setSelectedFilter('date')}
-              className="mr-2"
-            />
-            <FilterButton
-              icon="clock-outline"
-              text="00:00"
-              isActive={selectedFilter === 'time'}
-              activeColor="#45AF31"
-              inactiveColor="#fff"
-              activeTextColor="#fff"
-              inactiveTextColor="#45AF31"
-              activeBorderColor="#45AF31"
-              inactiveBorderColor="#45AF31"
-              iconColor="#45AF31"
-              activeIconColor="#fff"
-              onPress={() => setSelectedFilter('time')}
-            />
+    <View className="flex-1 bg-white">
+      <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+        {/* Green Top Section */}
+        <View 
+          className="bg-primary px-5"
+          style={{ paddingTop: insets.top + 16, paddingBottom: 60 }}
+        >
+          <View className="flex-row items-center justify-between mb-4">
+            <Logo width={100} height={40} />
+            <TouchableOpacity>
+              <Bell width={24} height={24} color="#FFF" />
+            </TouchableOpacity>
           </View>
-        </Container>
+        </View>
+
+        {/* Profile Section Content overlapping green bg */}
+        <View className="px-5 -mt-16">
+          <View className="flex-row items-end mb-4">
+            {/* Avatar with level badge overlapping */}
+            <View className="relative mr-4">
+              <View className="w-[110px] h-[110px] rounded-full border-4 border-white bg-[#ececec] overflow-hidden justify-center items-center">
+                <Image 
+                  source={{ uri: 'https://i.imgflip.com/1ur9b0.jpg' }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              </View>
+              {/* Level Badge */}
+              <View className="absolute -bottom-1 left-4 w-[38px] h-[38px] rounded-full border-4 border-white bg-primary justify-center items-center z-10">
+                <Text className="text-white font-artico-bold text-xs" style={{marginTop: 1}}>10</Text>
+              </View>
+            </View>
+
+            {/* Progress bar */}
+            <View className="flex-1 pb-3">
+              <View className="h-[6px] w-full bg-[#d0d0d0] rounded-full overflow-hidden mb-1">
+                <View className="h-full bg-primary w-[85%] rounded-full" />
+              </View>
+              <View className="flex-row justify-between">
+                <Text className="text-[#5B5757] font-manrope-medium text-xs">1000</Text>
+                <Text className="text-[#5B5757] font-manrope-medium text-xs">2000</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Name & Title */}
+          <Text className="text-[28px] font-artico-bold text-text-primary mb-1 uppercase tracking-widest mt-2" style={{lineHeight: 32}}>
+            ШУКУР ГАЙНУТДИНОВ
+          </Text>
+          <View className="flex-row items-center mb-6">
+            <Text className="text-base mr-1.5">🏆</Text>
+            <Text className="text-[#322D2D] font-manrope-medium text-[15px]">Полупрофи</Text>
+          </View>
+
+          {/* Action Buttons */}
+          <View className="flex-row justify-between mb-4">
+            <TouchableOpacity className="flex-1 bg-primary py-3.5 rounded-lg mr-2 items-center justify-center">
+              <Text className="text-white font-manrope-bold text-[15px]">Найти матч</Text>
+            </TouchableOpacity>
+            <TouchableOpacity className="flex-1 bg-primary py-3.5 rounded-lg ml-2 items-center justify-center">
+              <Text className="text-white font-manrope-bold text-[15px]">Создать лобби</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Popular Fields Section */}
         <Container padding="sm">
           <SectionHeader 
-            title="ПОПУЛЯРНЫЕ ПОЛЯ"
+            title="РЕКОМЕНДУЕМЫЕ ЛОББИ"
             onViewAll={() => console.log('View all fields')}
           />
 
@@ -264,6 +264,6 @@ export const HomeScreen: React.FC = () => {
           </View>
         </Container>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }; 

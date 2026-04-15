@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
 import 'react-native-gesture-handler';
 import './global.css';
@@ -42,9 +43,11 @@ export default function App() {
   }
 
   return (
-    <View className="flex-1 bg-background-default">
-      <StatusBar style="auto" />
-      <AppNavigator />
-    </View>
+    <SafeAreaProvider>
+      <View className="flex-1 bg-background-default">
+        <StatusBar style="auto" />
+        <AppNavigator />
+      </View>
+    </SafeAreaProvider>
   );
 } 
