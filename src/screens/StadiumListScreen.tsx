@@ -45,50 +45,30 @@ export const StadiumListScreen: React.FC<Props> = ({ navigation, rootNavigation 
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      {/* Header Layout */}
-      <Header
-        left={
-          <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
-            <MaterialCommunityIcons name="arrow-left" size={28} color="#212121" />
-          </TouchableOpacity>
-        }
-        title="СПИСОК ПОЛЕЙ"
-        right={
-          <TouchableOpacity>
-            <MaterialCommunityIcons name="dots-vertical" size={28} color="#212121" />
-          </TouchableOpacity>
-        }
-      />
+    <SafeAreaView className="flex-1 bg-transparent">
+      <View className="bg-white">
+        {/* Header Layout */}
+        <Header
+          left={
+            <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
+              <MaterialCommunityIcons name="arrow-left" size={28} color="#212121" />
+            </TouchableOpacity>
+          }
+          title="СПИСОК ПОЛЕЙ"
+          right={
+            <TouchableOpacity>
+              <MaterialCommunityIcons name="dots-vertical" size={28} color="#212121" />
+            </TouchableOpacity>
+          }
+        />
 
-      {/* Stadium count subtext */}
-      <View className="items-center pb-2 -mt-2">
-        <Text className="text-gray-600 font-manrope-medium text-xs">121 стадион</Text>
+        {/* Stadium count subtext */}
+        <View className="items-center pb-2 -mt-2">
+          <Text className="text-gray-600 font-manrope-medium text-xs">121 стадион</Text>
+        </View>
       </View>
 
-      <Container padding="sm">
-        <View className="flex-row space-x-3">
-          {mockDates.map((date) => (
-            <FilterButton
-              key={date.value}
-              text={date.label}
-              subLabel={date.day}
-              isActive={selectedDate === date.value}
-              hideIcon
-              onPress={() => setSelectedDate(date.value)}
-              activeColor="#45AF31"
-              inactiveColor="#fff"
-              activeTextColor="#fff"
-              inactiveTextColor="#212121"
-              activeBorderColor="#45AF31"
-              inactiveBorderColor="#E0E0E0"
-              className="mr-1"
-            />
-          ))}
-        </View>
-      </Container>
-
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 bg-transparent">
         {/* Use FieldCard for each stadium */}
         {mockStadiums.map((item) => (
           <Container key={item.id} padding="sm">

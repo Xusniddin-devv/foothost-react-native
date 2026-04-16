@@ -31,7 +31,9 @@ export type RootStackParamList = {
   PersonalData: undefined;
   AboutUs: undefined;
   PhoneVerification: { phoneNumber: string };
-  BookingStep1: undefined;
+  BookingStep1: { showSchedule?: boolean } | undefined;
+  BookingStep2: undefined;
+  PaymentScreen: undefined;
   BookingStep3: undefined;
   MatchRating: {
     matchId: string;

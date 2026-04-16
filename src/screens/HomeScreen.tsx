@@ -7,20 +7,112 @@ import {
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import MaskedView from '@react-native-masked-view/masked-view';
-import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path } from 'react-native-svg';
+
+// ─── FACEIT-style rating arc badge ───────────────────────────────────────────
+interface RatingBadgeProps {
+  level: number;   // 1-10
+  score: number;   // current points
+  maxScore: number;
+}
+
+const GREEN = '#45AF31';
+
+const RatingBadge: React.FC<RatingBadgeProps> = ({ level, score: _score, maxScore: _maxScore }) => {
+  const size = 48;
+  /** Gap at bottom (~60°); arc ~300° with round caps */
+  const startAngle = 120;
+  const totalSweep = 300;
+  const progress = Math.min(Math.max(level / 10, 0), 1);
+  const filledSweep = totalSweep * progress;
+
+  /** Wider white stroke under green = white rims on both sides of the green band */
+  const greenStroke = 5;
+  const whiteStroke = greenStroke + 3;
+  const trackStroke = whiteStroke;
+  const inset = 1.5;
+  const radius = size / 2 - whiteStroke / 2 - inset;
+  const cx = size / 2;
+  const cy = size / 2;
+
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const pt = (angle: number) => ({
+    x: cx + radius * Math.cos(toRad(angle)),
+    y: cy + radius * Math.sin(toRad(angle)),
+  });
+
+  const arcPath = (fromDeg: number, sweep: number) => {
+    if (sweep <= 0) return '';
+    const s = pt(fromDeg);
+    const e = pt(fromDeg + sweep);
+    const large = sweep > 180 ? 1 : 0;
+    return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${radius} ${radius} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
+  };
+
+  const trackPath = arcPath(startAngle, totalSweep);
+  const fillPath = arcPath(startAngle, filledSweep);
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: size / 2,
+        backgroundColor: '#FFFFFF',
+      }}
+    >
+      <Svg width={size} height={size} style={{ position: 'absolute' }}>
+        {/* Light track (full arc) */}
+        <Path
+          d={trackPath}
+          stroke="rgba(0,0,0,0.09)"
+          strokeWidth={trackStroke}
+          fill="none"
+          strokeLinecap="round"
+        />
+        {filledSweep > 0 && (
+          <>
+            {/* White “sandwich” under green → inner + outer white borders */}
+            <Path
+              d={fillPath}
+              stroke="#FFFFFF"
+              strokeWidth={whiteStroke}
+              fill="none"
+              strokeLinecap="round"
+            />
+            <Path
+              d={fillPath}
+              stroke={GREEN}
+              strokeWidth={greenStroke}
+              fill="none"
+              strokeLinecap="round"
+            />
+          </>
+        )}
+      </Svg>
+
+      <Text
+        style={{
+          color: GREEN,
+          fontFamily: 'ManRope-Bold',
+          fontSize: 18,
+          lineHeight: 28,
+          letterSpacing: -0.8,
+        }}
+      >
+        {level}
+      </Text>
+    </View>
+  );
+};
 
 // Import reusable components
-import { 
-  SearchBar, 
-  FilterButton, 
-  SectionHeader, 
-  FieldCard, 
-  NewsCard, 
-  ClanCard,
+import {
+  SectionHeader,
+  FieldCard,
   Container,
-  Header
 } from '../components/common';
 
 // Import SVG files
@@ -29,8 +121,8 @@ import News2Svg from '../../assets/images/homepage/news2.svg';
 import BestFieldSvg from '../../assets/images/homepage/bestfield.svg';
 import MockClansSvg from '../../assets/images/homepage/mockClans.svg';
 import ReadyMatchSvg from '../../assets/images/homepage/readyMatch.svg';
-import Logo from '../../assets/images/logo.svg';
-import Bell from '../../assets/images/homepage/bell.svg';
+import Logo from '../../assets/images/logo_white.svg';
+import Bell from '../../assets/images/homepage/bell-white.svg';
 
 const mockClans = [
   { id: 1, name: 'Paxtakor', wins: 37, losses: 8, score: 1886, rank: 1 },
@@ -57,21 +149,23 @@ export const HomeScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* White only for main feed — not full-screen behind tab bar */}
+        <View className="bg-white">
         {/* Profile Section Content overlapping green bg */}
         <View className="px-5 -mt-16">
           <View className="flex-row items-end mb-4">
             {/* Avatar with level badge overlapping */}
             <View className="relative mr-4">
               <View className="w-[110px] h-[110px] rounded-full border-4 border-white bg-[#ececec] overflow-hidden justify-center items-center">
-                <Image 
+                <Image
                   source={{ uri: 'https://i.imgflip.com/1ur9b0.jpg' }}
                   className="w-full h-full"
                   resizeMode="cover"
                 />
               </View>
-              {/* Level Badge */}
-              <View className="absolute -bottom-1 left-4 w-[38px] h-[38px] rounded-full border-4 border-white bg-primary justify-center items-center z-10">
-                <Text className="text-white font-artico-bold text-xs" style={{marginTop: 1}}>10</Text>
+              {/* FACEIT-style rating arc — bottom-right */}
+              <View className="absolute -bottom-3 -right-3 z-10">
+                <RatingBadge level={10} score={1000} maxScore={2000} />
               </View>
             </View>
 
@@ -135,134 +229,91 @@ export const HomeScreen: React.FC = () => {
         </Container>
 
         {/* News Section */}
-        <Container padding="sm" className="mb-2 w-full">
-          <SectionHeader 
-            title="NEWS"
-            onViewAll={() => console.log('View all news')}
-          />
+        <View className="mb-4">
+          {/* Players to follow - horizontal scroll */}
+          <View className="px-5 mb-3">
+            <SectionHeader
+              title="NEWS"
+              onViewAll={() => console.log('View all news')}
+            />
+          </View>
 
-          {/* News Grid */}
-          <View className="w-full mb-4">
-            {/* First Row - 2 items */}
-            <View className="w-full flex-row mb-2">
-              <TouchableOpacity className="w-1/2 pr-1" onPress={() => console.log('News 1 pressed')}>
-                <View className="w-full h-40 rounded-lg overflow-hidden">
-                  <News1Svg width="100%" height="100%" />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+            className="mb-4"
+          >
+            {[
+              { id: 1, name: 'Qobiljonov qobil', avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cristiano_Ronaldo_2018.jpg/220px-Cristiano_Ronaldo_2018.jpg' },
+              { id: 2, name: 'Qobiljonov qobil', avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cristiano_Ronaldo_2018.jpg/220px-Cristiano_Ronaldo_2018.jpg' },
+              { id: 3, name: 'Qobiljonov qobil', avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cristiano_Ronaldo_2018.jpg/220px-Cristiano_Ronaldo_2018.jpg' },
+              { id: 4, name: 'Qobiljonov qobil', avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cristiano_Ronaldo_2018.jpg/220px-Cristiano_Ronaldo_2018.jpg' },
+            ].map((player) => (
+              <View
+                key={player.id}
+                className="items-center border border-primary rounded-xl p-3"
+                style={{ width: 140 }}
+              >
+                <View className="w-16 h-16 rounded-full overflow-hidden mb-2 bg-[#ececec]">
+                  <Image source={{ uri: player.avatar }} className="w-full h-full" resizeMode="cover" />
                 </View>
-                <View className="absolute bottom-2 left-5 right-2 z-20">
-                  <Text className="text-white font-manrope-medium text-xs leading-4">
+                <Text className="font-manrope-semibold text-[13px] text-text-primary text-center mb-2" numberOfLines={1}>
+                  {player.name}
+                </Text>
+                <TouchableOpacity className="border border-primary rounded-lg px-4 py-1">
+                  <Text className="text-primary font-manrope-medium text-xs">Подписаться</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* News grid - fixed width inside px-5 */}
+          <View className="px-5">
+            {/* Row 1 — two equal cards */}
+            <View className="flex-row mb-2" style={{ gap: 8 }}>
+              <TouchableOpacity style={{ flex: 1 }} onPress={() => console.log('News 1')}>
+                <View className="h-40 rounded-xl overflow-hidden">
+                  <News1Svg width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
+                </View>
+                <View className="absolute bottom-2 left-2 right-2">
+                  <Text className="text-white font-manrope-semibold text-xs leading-4" numberOfLines={2}>
                     Gamemag.ru - Состоялся релиз футбольного...
                   </Text>
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity className="w-1/2 pl-1" onPress={() => console.log('News 2 pressed')}>
-                <View className="w-full h-40 rounded-lg overflow-hidden">
-                  <News2Svg width="100%" height="100%" />
+              <TouchableOpacity style={{ flex: 1 }} onPress={() => console.log('News 2')}>
+                <View className="h-40 rounded-xl overflow-hidden">
+                  <News2Svg width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
                 </View>
-                <View className="absolute bottom-2 left-5 right-2 z-20">
-                  <Text className="text-white font-manrope-medium text-xs leading-4">
+                <View className="absolute bottom-2 left-2 right-2">
+                  <Text className="text-white font-manrope-semibold text-xs leading-4" numberOfLines={2}>
                     Yamal helps Barcelona seal La Liga title at rivals
                   </Text>
                 </View>
               </TouchableOpacity>
             </View>
-            
-            {/* Second Row - 1 item */}
-            <TouchableOpacity className="w-full" onPress={() => console.log('Large news pressed')}>
-              <View className="w-full h-64 rounded-lg overflow-hidden">
-                <BestFieldSvg width="100%" height="100%" />
+
+            {/* Row 2 — full-width card */}
+            <TouchableOpacity className="w-full" onPress={() => console.log('Large news')}>
+              <View className="w-full h-56 rounded-xl overflow-hidden">
+                <BestFieldSvg width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
               </View>
-              <View className="absolute top-4 left-4">
-                <Text className="text-white text-[28px] font-artico-bold mb-1">
+              <View className="absolute top-4 left-4 right-4">
+                <Text className="text-white text-2xl font-artico-bold mb-1" style={{ lineHeight: 28 }}>
                   ЛУЧШИЕ ФУТБОЛЬНЫЕ ПОЛЯ В ТАШКЕНТЕ
                 </Text>
-                <Text className="text-white font-manrope-medium text-sm">Debits - 03 June 2023</Text>
+                <Text className="text-white font-manrope-medium text-xs">Debits - 03 June 2023</Text>
               </View>
-              <View className="absolute bottom-4 right-4 border border-white rounded-lg px-6 py-2">
-                <Text className="text-white font-manrope-medium">Читать</Text>
+              <View className="absolute bottom-4 right-4 border border-white rounded-lg px-5 py-2">
+                <Text className="text-white font-manrope-medium text-sm">Читать</Text>
               </View>
             </TouchableOpacity>
           </View>
-        </Container>
-
-        {/* Clans Section */}
-        <Container padding="sm">
-          <SectionHeader 
-            title="CLANS"
-            onViewAll={() => console.log('View all clans')}
-          />
-
-          <View className="space-y-3 px-3">
-            {mockClans.map((clan) => (
-              <ClanCard
-                key={clan.id}
-                rank={clan.rank}
-                name={clan.name}
-                wins={clan.wins}
-                losses={clan.losses}
-                score={clan.score}
-                logo={<MockClansSvg width={34} height={42} />}
-              />
-            ))}
-          </View>
-        </Container>
-
-        {/* Ready to Play Section */}
-        <Container padding="sm" className="mb-4">
-          <View className="flex-row items-center justify-between bg-[#EEEDED] p-6 rounded-lg">
-            <View className="flex-1">
-              <MaskedView
-                style={{ flexDirection: 'row', alignSelf: 'flex-start' }}
-                maskElement={
-                  <Text
-                    style={{
-                      fontSize: 40,
-                      fontFamily: 'Artico-Bold',
-                      lineHeight: 37,
-                      letterSpacing: 0.1,
-                      color: 'black',
-                    }}
-                  >
-                    ГОТОВ К{"\n"}ИГРЕ?
-                  </Text>
-                }
-              >
-                <LinearGradient
-                  colors={['#A2C673', '#43AE30']}
-                  start={{ x: 0, y: 1 }}
-                  end={{ x: 0, y: 0 }}
-                  style={{
-                    width: 320,
-                    height: 100, 
-                    alignItems: 'flex-start',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text
-                    style={{
-                      opacity: 0,
-                      fontSize: 40,
-                      fontFamily: 'Artico',
-                      fontWeight: 'bold',
-                      lineHeight: 37,
-                      letterSpacing: 0.1,
-                    }}
-                  >
-                    ГОТОВ К{"\n"}ИГРЕ?
-                  </Text>
-                </LinearGradient>
-              </MaskedView>
-              <TouchableOpacity className="mt-2 border-2 border-primary rounded-lg px-6 py-3 self-start">
-                <Text className="text-primary font-manrope-medium">Создать Матч</Text>
-              </TouchableOpacity>
-            </View>
-            <View className="flex-1">
-              <View className="absolute -top-56 -left-14 rounded-lg">
-                <ReadyMatchSvg width="28%" height="50%" />
-              </View>
-            </View>
-          </View>
-        </Container>
+        </View>
+        {/* (Clans and Ready-to-Play sections removed) */}
+        <View style={{ height: 32 }} />
+        </View>
       </ScrollView>
     </View>
   );
