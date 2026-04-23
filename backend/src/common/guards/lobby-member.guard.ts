@@ -1,1 +1,0 @@
-export const LOBBY_MEMBER_GUARD_TOKEN = 'LOBBY_MEMBER';
