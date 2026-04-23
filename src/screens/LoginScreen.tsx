@@ -95,7 +95,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               onChangeText={(text) =>
                 setFormData({ ...formData, phoneNumber: text })
               }
-              keyboardType="phone-pad"
+              keyboardType="default"
               autoCapitalize="none"
               className="mb-4"
             />
