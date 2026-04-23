@@ -140,8 +140,6 @@ import {
 import News1Svg from '../../assets/images/homepage/news1.svg';
 import News2Svg from '../../assets/images/homepage/news2.svg';
 import BestFieldSvg from '../../assets/images/homepage/bestfield.svg';
-import MockClansSvg from '../../assets/images/homepage/mockClans.svg';
-import ReadyMatchSvg from '../../assets/images/homepage/readyMatch.svg';
 import Logo from '../../assets/images/logo_white.svg';
 import Bell from '../../assets/images/homepage/bell-white.svg';
 
