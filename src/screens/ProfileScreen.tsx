@@ -696,7 +696,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
                               {player.user?.firstName ?? 'Игрок'} {player.user?.lastName ?? ''}
                             </Text>
                             {isCreator && player.userId !== user?.id ? (
-                              <TouchableOpacity onPress={() => handleKickPlayer(player.userId)} className="rounded-lg border border-red-300 px-2 py-1">
+                              <TouchableOpacity onPress={() => void handleKickPlayer(player.userId)} className="rounded-lg border border-red-300 px-2 py-1">
                                 <Text className="font-manrope-semibold text-xs text-red-500">Удалить</Text>
                               </TouchableOpacity>
                             ) : null}
