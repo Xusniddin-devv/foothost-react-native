@@ -52,6 +52,30 @@ export class FieldsService {
     await this.fieldRepo.delete(id);
   }
 
+  async addPhoto(
+    id: string,
+    ownerId: string,
+    url: string,
+  ): Promise<Field> {
+    const field = await this.findOne(id);
+    if (field.ownerId !== ownerId) throw new ForbiddenException();
+    const photos = [...(field.photos ?? []), url];
+    await this.fieldRepo.update(id, { photos });
+    return this.findOne(id);
+  }
+
+  async removePhoto(
+    id: string,
+    ownerId: string,
+    url: string,
+  ): Promise<Field> {
+    const field = await this.findOne(id);
+    if (field.ownerId !== ownerId) throw new ForbiddenException();
+    const photos = (field.photos ?? []).filter((p) => p !== url);
+    await this.fieldRepo.update(id, { photos });
+    return this.findOne(id);
+  }
+
   async getSlots(fieldId: string, date?: string): Promise<FieldSlot[]> {
     const day = date ?? new Date().toISOString().slice(0, 10);
     const start = new Date(`${day}T00:00:00.000Z`);

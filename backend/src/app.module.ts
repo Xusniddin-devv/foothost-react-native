@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 import { User } from './users/user.entity';
 import { OtpCode } from './auth/otp-code.entity';
@@ -13,6 +15,7 @@ import { Team } from './teams/team.entity';
 import { Payment } from './payments/payment.entity';
 import { Booking } from './bookings/booking.entity';
 import { Review } from './reviews/review.entity';
+import { News } from './news/news.entity';
 
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -23,6 +26,8 @@ import { PaymentsModule } from './payments/payments.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { NewsModule } from './news/news.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 function parseRedisUrl(url?: string) {
   if (!url) return { host: 'localhost', port: 6379 };
@@ -35,6 +40,8 @@ function parseRedisUrl(url?: string) {
     tls: parsed.protocol === 'rediss:' ? {} : undefined,
   };
 }
+
+const UPLOAD_ROOT = process.env.UPLOAD_ROOT ?? join(process.cwd(), 'uploads');
 
 @Module({
   imports: [
@@ -53,6 +60,7 @@ function parseRedisUrl(url?: string) {
         Payment,
         Booking,
         Review,
+        News,
       ],
       synchronize: process.env.NODE_ENV !== 'production',
       ssl:
@@ -61,6 +69,12 @@ function parseRedisUrl(url?: string) {
           : false,
     }),
     BullModule.forRoot({ redis: parseRedisUrl(process.env.REDIS_URL) }),
+    ServeStaticModule.forRoot({
+      rootPath: UPLOAD_ROOT,
+      serveRoot: '/uploads',
+      serveStaticOptions: { index: false, fallthrough: false },
+    }),
+    UploadsModule,
     AuthModule,
     UsersModule,
     FieldsModule,
@@ -70,6 +84,7 @@ function parseRedisUrl(url?: string) {
     BookingsModule,
     ReviewsModule,
     NotificationsModule,
+    NewsModule,
   ],
 })
 export class AppModule {}

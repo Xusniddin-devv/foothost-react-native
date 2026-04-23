@@ -12,5 +12,6 @@ export class User {
   @Column({ type: 'varchar', default: 'player' }) role!: UserRole;
   @Column({ default: false }) isPhoneVerified!: boolean;
   @Column({ nullable: true }) expoPushToken!: string | null;
+  @Column({ nullable: true }) avatarUrl!: string | null;
   @CreateDateColumn() createdAt!: Date;
 }

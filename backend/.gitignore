@@ -21,3 +21,9 @@
 *.sw?
 /coverage
 /logs
+
+# uploaded user content (local dev only)
+/uploads/avatars/*
+/uploads/fields/*
+/uploads/news/*
+!/uploads/**/.gitkeep
