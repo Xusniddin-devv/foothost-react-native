@@ -22,7 +22,8 @@ import { usersApi } from '../services/api/users';
 import { getApiErrorMessage } from '../services/api/client';
 import { useLobbySocket } from '../hooks/useLobbySocket';
 import { useAuth } from '../contexts/AuthContext';
-import type { Field, Lobby, LobbyPlayer, Team as ApiTeam, User } from '../types/api';
+import { paymentsApi } from '../services/api/payments';
+import type { Field, Lobby, LobbyPlayer, Team as ApiTeam, User, Payment, PaymentStatus } from '../types/api';
 
 type BookingStep2ScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -83,9 +84,11 @@ const PriceCard = ({ total, collected, onPayPress }: { total: string; collected:
 const PlayerSlot = ({
   player,
   onPress,
+  paymentStatus,
 }: {
   player: LobbyPlayer | null;
   onPress: () => void;
+  paymentStatus?: PaymentStatus;
 }) => (
   <TouchableOpacity
     onPress={onPress}
@@ -93,9 +96,31 @@ const PlayerSlot = ({
     style={{ width: 52, height: 52 }}
   >
     {player ? (
-      <Text className="text-primary font-manrope-bold text-xs" numberOfLines={1}>
-        {player.user?.firstName?.trim() || 'Игрок'}
-      </Text>
+      <>
+        <Text className="text-primary font-manrope-bold text-xs" numberOfLines={1}>
+          {player.user?.firstName?.trim() || 'Игрок'}
+        </Text>
+        {paymentStatus != null && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 1,
+              right: 1,
+              width: 10,
+              height: 10,
+              borderRadius: 5,
+              backgroundColor:
+                paymentStatus === 'paid'
+                  ? '#45AF31'
+                  : paymentStatus === 'pending'
+                  ? '#F59E0B'
+                  : '#EF4444',
+              borderWidth: 1.5,
+              borderColor: 'white',
+            }}
+          />
+        )}
+      </>
     ) : (
       <Text className="text-primary text-2xl font-manrope-light" style={{ lineHeight: 28 }}>+</Text>
     )}
@@ -107,10 +132,12 @@ const TeamCard = ({
   team,
   onAddPlayer,
   onShuffle,
+  paymentMap,
 }: {
   team: DisplayTeam;
   onAddPlayer: (teamId: string, slotIndex: number) => void;
   onShuffle: (teamId: string) => void;
+  paymentMap: Record<string, PaymentStatus>;
 }) => (
   <View
     className="bg-white rounded-2xl px-4 py-3 mb-3"
@@ -128,6 +155,7 @@ const TeamCard = ({
           key={idx}
           player={player}
           onPress={() => onAddPlayer(team.id, idx)}
+          paymentStatus={player?.userId ? paymentMap[player.userId] : undefined}
         />
       ))}
     </View>
@@ -154,12 +182,19 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
   });
   const [qrVisible, setQrVisible] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const isCreator = !!(user?.id && lobby?.creatorId && user.id === lobby.creatorId);
 
   const approvedPlayers = useMemo(
     () => players.filter((p) => p.status === 'approved'),
     [players],
   );
+
+  const paymentMap = useMemo<Record<string, PaymentStatus>>(() => {
+    const map: Record<string, PaymentStatus> = {};
+    for (const p of payments) map[p.userId] = p.status;
+    return map;
+  }, [payments]);
 
   const teams = useMemo<DisplayTeam[]>(() => {
     const teamCount = Math.max(1, lobby?.teamCount ?? 2);
@@ -195,13 +230,15 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
     let cancelled = false;
     (async () => {
       try {
-        const [l, p] = await Promise.all([
+        const [l, p, paymentData] = await Promise.all([
           lobbiesApi.get(lobbyId),
           lobbiesApi.players(lobbyId).catch(() => [] as LobbyPlayer[]),
+          paymentsApi.status(lobbyId).catch(() => ({ payments: [] as Payment[] })),
         ]);
         if (cancelled) return;
         setLobby(l);
         setPlayers(p);
+        setPayments(paymentData.payments);
         const fId = fieldId ?? l.fieldId;
         if (fId) {
           const f = await fieldsApi.get(fId).catch(() => null);
@@ -460,6 +497,7 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
               team={team}
               onAddPlayer={handleAddPlayer}
               onShuffle={handleShuffle}
+              paymentMap={paymentMap}
             />
           ))}
         </View>
