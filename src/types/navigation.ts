@@ -31,8 +31,10 @@ export type RootStackParamList = {
   PersonalData: undefined;
   AboutUs: undefined;
   PhoneVerification: { phoneNumber: string };
-  BookingStep1: { showSchedule?: boolean; fieldId?: string } | undefined;
-  BookingStep2: { lobbyId?: string; fieldId?: string } | undefined;
+  BookingStep1:
+    | { showSchedule?: boolean; fieldId?: string; lobbyId?: string }
+    | undefined;
+  BookingStep2: { lobbyId?: string; fieldId?: string; fromProfile?: boolean } | undefined;
   PaymentScreen: { lobbyId?: string; amount?: number } | undefined;
   BookingStep3: { lobbyId?: string } | undefined;
   MatchRating: {
