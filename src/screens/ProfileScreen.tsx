@@ -15,7 +15,8 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
-import { Header, Container, MatchCard, TeamCard, Button } from '../components/common';
+import type { Lobby, Field } from '../types/api';
+import { Header, Container, TeamCard, Button } from '../components/common';
 import LogoWhite from '../../assets/images/logo_white.svg';
 import CameraSvg from '../../assets/images/profile/camera.svg';
 import { useAuth } from '../contexts/AuthContext';
@@ -105,15 +106,15 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history' | 'teams'>('upcoming');
   const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
   const { user, logout } = useAuth();
-  const [myLobbies, setMyLobbies] = useState<import('../types/api').Lobby[]>([]);
-  const [lobbyFields, setLobbyFields] = useState<Record<string, import('../types/api').Field>>({});
+  const [myLobbies, setMyLobbies] = useState<Lobby[]>([]);
+  const [lobbyFields, setLobbyFields] = useState<Record<string, Field>>({});
 
   useEffect(() => {
     lobbiesApi.mine().then(async (data) => {
       setMyLobbies(data);
       const ids = [...new Set(data.map((l) => l.fieldId))];
       const fetched = await Promise.all(ids.map((id) => fieldsApi.get(id).catch(() => null)));
-      const map: Record<string, import('../types/api').Field> = {};
+      const map: Record<string, Field> = {};
       fetched.forEach((f) => { if (f) map[f.id] = f; });
       setLobbyFields(map);
     }).catch(() => {});
