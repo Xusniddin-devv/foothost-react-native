@@ -246,12 +246,16 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   const openMap = useCallback(async () => {
     if (!selectedField?.mapUrl) return;
-    const supported = await Linking.canOpenURL(selectedField.mapUrl);
-    if (!supported) {
+    try {
+      const supported = await Linking.canOpenURL(selectedField.mapUrl);
+      if (!supported) {
+        Alert.alert('Ошибка', 'Не удалось открыть ссылку карты');
+        return;
+      }
+      await Linking.openURL(selectedField.mapUrl);
+    } catch {
       Alert.alert('Ошибка', 'Не удалось открыть ссылку карты');
-      return;
     }
-    await Linking.openURL(selectedField.mapUrl);
   }, [selectedField?.mapUrl]);
 
   useEffect(() => {
