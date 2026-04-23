@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { useAuth } from '../contexts/AuthContext';
+import { fieldsApi } from '../services/api/fields';
+import { newsApi } from '../services/api/news';
+import type { Field, News } from '../types/api';
 
 // ─── FACEIT-style rating arc badge ───────────────────────────────────────────
 interface RatingBadgeProps {
@@ -132,6 +136,31 @@ const mockClans = [
 
 export const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const [topField, setTopField] = useState<Field | null>(null);
+  const [newsFeed, setNewsFeed] = useState<News[]>([]);
+
+  const loadData = useCallback(async () => {
+    try {
+      const [fields, news] = await Promise.all([
+        fieldsApi.list().catch(() => [] as Field[]),
+        newsApi.list().catch(() => [] as News[]),
+      ]);
+      setTopField(fields[0] ?? null);
+      setNewsFeed(news);
+    } catch {
+      /* silent; user can pull to refresh once we expose a RefreshControl here */
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const displayName = user
+    ? `${user.firstName} ${user.lastName}`.trim().toUpperCase() || 'ИГРОК'
+    : 'ИГРОК FOOTHOST';
+  const avatarUri = user?.avatarUrl ?? 'https://i.imgflip.com/1ur9b0.jpg';
 
   return (
     <View className="flex-1 bg-white">
@@ -158,7 +187,7 @@ export const HomeScreen: React.FC = () => {
             <View className="relative mr-4">
               <View className="w-[110px] h-[110px] rounded-full border-4 border-white bg-[#ececec] overflow-hidden justify-center items-center">
                 <Image
-                  source={{ uri: 'https://i.imgflip.com/1ur9b0.jpg' }}
+                  source={{ uri: avatarUri }}
                   className="w-full h-full"
                   resizeMode="cover"
                 />
@@ -183,7 +212,7 @@ export const HomeScreen: React.FC = () => {
 
           {/* Name & Title */}
           <Text className="text-[28px] font-artico-bold text-text-primary mb-1 uppercase tracking-widest mt-2" style={{lineHeight: 32}}>
-            ШУКУР ГАЙНУТДИНОВ
+            {displayName}
           </Text>
           <View className="flex-row items-center mb-6">
             <Text className="text-base mr-1.5">🏆</Text>
@@ -209,11 +238,17 @@ export const HomeScreen: React.FC = () => {
           />
 
           <FieldCard
-            name="BUNYODKOR"
-            location="Малая кольцевая дорога"
-            rating={9.9}
-            distance="4.9 км от вас"
-            image={require('../../assets/images/homepage/homepage.png')}
+            name={topField?.name ?? 'BUNYODKOR'}
+            location={topField?.address ?? 'Малая кольцевая дорога'}
+            rating={topField ? Number(topField.rating.toFixed(1)) : 9.9}
+            distance={
+              topField ? `${topField.reviewsCount} отзывов` : '4.9 км от вас'
+            }
+            image={
+              topField?.photos?.[0]
+                ? { uri: topField.photos[0] }
+                : require('../../assets/images/homepage/homepage.png')
+            }
             onPress={() => console.log('Field pressed')}
             roundedBottom={true}
           />

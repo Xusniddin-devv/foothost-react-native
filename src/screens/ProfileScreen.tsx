@@ -20,6 +20,7 @@ import LogoWhite from '../../assets/images/logo_white.svg';
 import CameraSvg from '../../assets/images/profile/camera.svg';
 import ChelseaSvg from '../../assets/images/profile/chelsea.svg';
 import MyuSvg from '../../assets/images/profile/MYU.svg';
+import { useAuth } from '../contexts/AuthContext';
 
 type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Profile'>;
 
@@ -203,6 +204,10 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history' | 'teams'>('upcoming');
   const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
+  const { user, logout } = useAuth();
+  const displayName = user
+    ? `${user.firstName} ${user.lastName}`.trim().toUpperCase() || mockUser.name
+    : mockUser.name;
 
   const handlePersonalDetails = () => {
     setShowDropdown(false);
@@ -221,7 +226,13 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
       {
         text: 'Выйти',
         style: 'destructive',
-        onPress: () => navigation.navigate('Onboarding'),
+        onPress: async () => {
+          await logout();
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Onboarding' }],
+          });
+        },
       },
     ]);
   };
@@ -306,7 +317,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         {/* Name + title */}
         <View className="items-center mt-2 mb-4 px-4">
           <Text className="text-[28px] font-artico-bold text-text-primary text-center" style={{ lineHeight: 32 }}>
-            {mockUser.name}
+            {displayName}
           </Text>
           <View className="flex-row items-center mt-1">
             <Text className="text-base mr-1">🏆</Text>

@@ -6,6 +6,7 @@ import * as Font from 'expo-font';
 import 'react-native-gesture-handler';
 import './global.css';
 import { AppNavigator } from './src/navigation';
+import { AuthProvider } from './src/contexts/AuthContext';
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -44,10 +45,12 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <View className="flex-1 bg-background-default">
-        <StatusBar style="auto" />
-        <AppNavigator />
-      </View>
+      <AuthProvider>
+        <View className="flex-1 bg-background-default">
+          <StatusBar style="auto" />
+          <AppNavigator />
+        </View>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 } 

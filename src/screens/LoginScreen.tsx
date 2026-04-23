@@ -11,6 +11,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import { Input, Container, LoginButton, RegisterButton } from '../components/common';
 import LogoWhite from '../../assets/images/logo_white.svg';
+import { useAuth } from '../contexts/AuthContext';
+import { getApiErrorMessage } from '../services/api/client';
 
 type LoginScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -22,6 +24,7 @@ interface Props {
 }
 
 export const LoginScreen: React.FC<Props> = ({ navigation }) => {
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     phoneNumber: '',
     password: '',
@@ -29,24 +32,22 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    if (!formData.phoneNumber || !formData.password) {
+      Alert.alert('Ошибка', 'Введите телефон и пароль');
+      return;
+    }
     setLoading(true);
-
-    // Mock authentication
-    setTimeout(() => {
+    try {
+      await login({
+        phone: formData.phoneNumber.trim(),
+        password: formData.password,
+      });
+      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+    } catch (err) {
+      Alert.alert('Ошибка входа', getApiErrorMessage(err, 'Неверный телефон или пароль'));
+    } finally {
       setLoading(false);
-
-      if (formData.phoneNumber === 'user' && formData.password === 'user') {
-        // Successful login
-        navigation.navigate('Main');
-      } else {
-        // Failed login
-        Alert.alert(
-          'Login Failed',
-          'Invalid credentials. Please use phone: "user" and password: "user"',
-          [{ text: 'OK' }]
-        );
-      }
-    }, 1000);
+    }
   };
 
   return (

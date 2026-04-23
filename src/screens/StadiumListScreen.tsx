@@ -1,23 +1,23 @@
-import React, { useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
-import { FieldCard, Container, Header, FilterButton } from '../components/common';
-import Logo from '../../assets/images/logo.svg';
+import { FieldCard, Container, Header } from '../components/common';
+import { fieldsApi } from '../services/api/fields';
+import { getApiErrorMessage } from '../services/api/client';
+import type { Field } from '../types/api';
 
-// 1. Add 'price' to the mock data
-const mockStadiums = [
-  { id: 1, name: 'BUNYODKOR', location: 'Малая кольцевая дорога', distance: '4.9 км от вас', rating: 9.9, price: 200000, image: require('../../assets/images/homepage/homepage.png') },
-  { id: 2, name: 'BUNYODKOR', location: 'Малая кольцевая дорога', distance: '4.9 км от вас', rating: 9.9, price: 200000, image: require('../../assets/images/homepage/homepage.png') },
-  { id: 3, name: 'BUNYODKOR', location: 'Малая кольцевая дорога', distance: '4.9 км от вас', rating: 9.9, price: 200000, image: require('../../assets/images/homepage/homepage.png') },
-];
-
-const mockDates = [
-  { label: 'Сегодня', value: 'today', day: 'Ср' },
-  { label: 'Завтра', value: 'tomorrow', day: 'Чт' },
-  { label: '11.06', value: '11.06', day: 'Pt' },
-];
+const FALLBACK_IMAGE = require('../../assets/images/homepage/homepage.png');
 
 type StadiumListScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -29,71 +29,157 @@ interface Props {
   rootNavigation?: StackNavigationProp<RootStackParamList, 'Main'>;
 }
 
-export const StadiumListScreen: React.FC<Props> = ({ navigation, rootNavigation }) => {
-  const [selectedDate, setSelectedDate] = useState('today');
+export const StadiumListScreen: React.FC<Props> = ({
+  navigation,
+  rootNavigation,
+}) => {
+  const [fields, setFields] = useState<Field[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDetailPress = () => {
-    if (rootNavigation) {
-      rootNavigation.navigate('BookingStep1');
+  const fetchFields = useCallback(async () => {
+    try {
+      const data = await fieldsApi.list();
+      setFields(data);
+      setError(null);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Не удалось загрузить список полей'));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
 
-  const textShadow = {
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  };
+  useFocusEffect(
+    useCallback(() => {
+      fetchFields();
+    }, [fetchFields]),
+  );
+
+  useEffect(() => {
+    fetchFields();
+  }, [fetchFields]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchFields();
+  }, [fetchFields]);
+
+  const handleDetailPress = useCallback(
+    (fieldId: string) => {
+      rootNavigation?.navigate('BookingStep1', { fieldId });
+    },
+    [rootNavigation],
+  );
+
+  const sorted = useMemo(
+    () => [...fields].sort((a, b) => b.rating - a.rating),
+    [fields],
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-transparent">
       <View className="bg-white">
-        {/* Header Layout */}
         <Header
           left={
-            <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
-              <MaterialCommunityIcons name="arrow-left" size={28} color="#212121" />
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              className="p-2"
+            >
+              <MaterialCommunityIcons
+                name="arrow-left"
+                size={28}
+                color="#212121"
+              />
             </TouchableOpacity>
           }
           title="СПИСОК ПОЛЕЙ"
           right={
             <TouchableOpacity>
-              <MaterialCommunityIcons name="dots-vertical" size={28} color="#212121" />
+              <MaterialCommunityIcons
+                name="dots-vertical"
+                size={28}
+                color="#212121"
+              />
             </TouchableOpacity>
           }
         />
 
-        {/* Stadium count subtext */}
         <View className="items-center pb-2 -mt-2">
-          <Text className="text-gray-600 font-manrope-medium text-xs">121 стадион</Text>
+          <Text className="text-gray-600 font-manrope-medium text-xs">
+            {loading ? 'Загрузка…' : `${fields.length} стадион(ов)`}
+          </Text>
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 bg-transparent">
-        {/* Use FieldCard for each stadium */}
-        {mockStadiums.map((item) => (
-          <Container key={item.id} padding="sm">
-            <View className="rounded-xl overflow-hidden shadow-lg bg-white">
-              <FieldCard
-                name={item.name}
-                location={item.location}
-                rating={item.rating}
-                distance={item.distance}
-                price={item.price}
-                image={item.image}
-                ratingPosition="next-to-name"
-                onPress={handleDetailPress}
-              />
-              <TouchableOpacity 
-                className="bg-primary py-3 items-center"
-                onPress={handleDetailPress}
-                style={{ marginTop: 0 }}
-              >
-                <Text className="text-white text-base font-bold">Подробнее</Text>
-              </TouchableOpacity>
-            </View>
-          </Container>
-        ))}
-      </ScrollView>
+      {loading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#1F7A1F" />
+        </View>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          className="flex-1 bg-transparent"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#1F7A1F"
+            />
+          }
+        >
+          {error && (
+            <Container padding="sm">
+              <Text className="text-red-500 text-center my-4 font-manrope-medium">
+                {error}
+              </Text>
+            </Container>
+          )}
+
+          {!error && sorted.length === 0 && (
+            <Container padding="sm">
+              <View className="py-12 items-center">
+                <Text className="text-gray-500 font-manrope-medium text-center">
+                  Пока нет доступных полей.{'\n'}Потяните вниз, чтобы обновить.
+                </Text>
+              </View>
+            </Container>
+          )}
+
+          {sorted.map((item) => {
+            const firstPhoto = item.photos?.[0];
+            const imageSource = firstPhoto
+              ? { uri: firstPhoto }
+              : FALLBACK_IMAGE;
+            return (
+              <Container key={item.id} padding="sm">
+                <View className="rounded-xl overflow-hidden shadow-lg bg-white">
+                  <FieldCard
+                    name={item.name}
+                    location={item.address}
+                    rating={Number(item.rating.toFixed(1))}
+                    distance={`${item.reviewsCount} отзывов`}
+                    price={item.pricePerHour}
+                    image={imageSource}
+                    ratingPosition="next-to-name"
+                    onPress={() => handleDetailPress(item.id)}
+                  />
+                  <TouchableOpacity
+                    className="bg-primary py-3 items-center"
+                    onPress={() => handleDetailPress(item.id)}
+                    style={{ marginTop: 0 }}
+                  >
+                    <Text className="text-white text-base font-bold">
+                      Подробнее
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </Container>
+            );
+          })}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,17 @@ import {
   Image,
   TouchableOpacity,
   Modal,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { fieldsApi } from '../services/api/fields';
+import { lobbiesApi } from '../services/api/lobbies';
+import { getApiErrorMessage } from '../services/api/client';
+import type { Field, FieldSlot, LobbyType } from '../types/api';
 import ParkingSvg from '../../assets/images/booking/parking.svg';
 import ShowerSvg from '../../assets/images/booking/shower.svg';
 import OutfitChangeSvg from '../../assets/images/booking/outfitChange.svg';
@@ -162,9 +168,10 @@ interface BookingModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (players: number, teams: number, hours: number, gameType: GameType) => void;
+  submitting?: boolean;
 }
 
-const BookingModal: React.FC<BookingModalProps> = ({ visible, onClose, onSubmit }) => {
+const BookingModal: React.FC<BookingModalProps> = ({ visible, onClose, onSubmit, submitting }) => {
   const [players, setPlayers] = useState(0);
   const [teams, setTeams] = useState(2);
   const [hours, setHours] = useState(2);
@@ -238,10 +245,15 @@ const BookingModal: React.FC<BookingModalProps> = ({ visible, onClose, onSubmit 
 
             {/* Submit */}
             <TouchableOpacity
-              className="bg-primary rounded-xl py-4 items-center mt-5"
+              className={`rounded-xl py-4 items-center mt-5 ${submitting ? 'bg-gray-400' : 'bg-primary'}`}
+              disabled={submitting}
               onPress={() => onSubmit(players, teams, hours, gameType)}
             >
-              <Text className="text-white font-manrope-bold text-base">Отправить</Text>
+              {submitting ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="text-white font-manrope-bold text-base">Отправить</Text>
+              )}
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -253,9 +265,61 @@ const BookingModal: React.FC<BookingModalProps> = ({ visible, onClose, onSubmit 
 // ── Main screen ────────────────────────────────────────────────────────────────
 export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
   const showSchedule = route?.params?.showSchedule === true;
+  const fieldId = route?.params?.fieldId;
   const [selectedDate, setSelectedDate] = useState('today');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [field, setField] = useState<Field | null>(null);
+  const [slots, setSlots] = useState<FieldSlot[]>([]);
+  const [loading, setLoading] = useState<boolean>(!!fieldId);
+
+  useEffect(() => {
+    if (!fieldId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [f, s] = await Promise.all([
+          fieldsApi.get(fieldId),
+          fieldsApi.slots(fieldId).catch(() => [] as FieldSlot[]),
+        ]);
+        if (cancelled) return;
+        setField(f);
+        setSlots(s);
+      } catch (err) {
+        if (!cancelled) Alert.alert('Ошибка', getApiErrorMessage(err, 'Не удалось загрузить поле'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fieldId]);
+
+  const displayStadium = useMemo(() => {
+    if (!field) return mockStadium;
+    const amenities = (field.amenities ?? {}) as Record<string, boolean>;
+    return {
+      name: field.name,
+      address: field.address,
+      distance: `${field.reviewsCount} отзывов`,
+      rating: Number(field.rating.toFixed(1)),
+      price: `${field.pricePerHour.toLocaleString('ru-RU')} СУМ`,
+      image: field.photos?.[0] ? { uri: field.photos[0] } : mockStadium.image,
+      cover: field.description ?? mockStadium.cover,
+      type: mockStadium.type,
+      size: mockStadium.size,
+      workTime: mockStadium.workTime,
+      amenities: {
+        parking: amenities.parking ?? false,
+        locker: amenities.locker ?? false,
+        shower: amenities.shower ?? false,
+        tribune: amenities.tribune ?? false,
+        lighting: amenities.lighting ?? false,
+      },
+    };
+  }, [field]);
 
   React.useEffect(() => {
     if (!showSchedule) return;
@@ -265,10 +329,36 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
 
   const currentSchedule = mockSchedule[selectedDate as keyof typeof mockSchedule];
 
-  const handleModalSubmit = (_players: number, _teams: number, _hours: number, _gameType: GameType) => {
-    setModalVisible(false);
-    navigation.navigate('BookingStep2');
-  };
+  const handleModalSubmit = useCallback(
+    async (players: number, teams: number, hours: number, gameType: GameType) => {
+      if (!fieldId) {
+        setModalVisible(false);
+        navigation.navigate('BookingStep2', {});
+        return;
+      }
+      setSubmitting(true);
+      try {
+        const lobbyType: LobbyType =
+          gameType === 'closed' ? 'closed' : gameType === 'invite' ? 'invite_only' : 'open';
+        const lobby = await lobbiesApi.create({
+          fieldId,
+          type: lobbyType,
+          maxPlayers: players > 0 ? players : teams * 5,
+          teamCount: Math.max(1, teams),
+          durationHours: Math.max(1, hours),
+        });
+        setModalVisible(false);
+        navigation.navigate('BookingStep2', { lobbyId: lobby.id, fieldId });
+      } catch (err) {
+        Alert.alert('Ошибка', getApiErrorMessage(err, 'Не удалось создать лобби'));
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [fieldId, navigation],
+  );
+
+  void slots;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -288,7 +378,7 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         {/* Image */}
         <View className="relative">
-          <Image source={mockStadium.image} className="w-full h-56" resizeMode="cover" />
+          <Image source={displayStadium.image} className="w-full h-56" resizeMode="cover" />
           <View className="absolute bottom-4 left-0 right-0 flex-row justify-center space-x-2">
             {[1, 2, 3, 4, 5].map((dot) => (
               <View key={dot} className={`w-2 h-2 rounded-full ${dot === 1 ? 'bg-white' : 'bg-white/50'}`} />
@@ -302,20 +392,20 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
             <View className="flex-row justify-between items-start">
               <View>
                 <View className="flex-row items-center">
-                  <Text className="text-text-primary font-artico-medium text-[30px]">{mockStadium.name}</Text>
+                  <Text className="text-text-primary font-artico-medium text-[30px]">{displayStadium.name}</Text>
                   <View className="bg-primary rounded-md px-2 py-1 ml-2 flex-row items-center">
-                    <Text className="text-white font-bold text-sm mr-1">{mockStadium.rating}</Text>
+                    <Text className="text-white font-bold text-sm mr-1">{displayStadium.rating}</Text>
                     <MaterialCommunityIcons name="star" size={14} color="white" />
                   </View>
                 </View>
                 <View className="flex-row items-center mt-1">
                   <MaterialCommunityIcons name="map-marker" size={14} color="#666" />
-                  <Text className="text-gray-500 font-manrope-medium text-xs ml-1">{mockStadium.address}</Text>
+                  <Text className="text-gray-500 font-manrope-medium text-xs ml-1">{displayStadium.address}</Text>
                 </View>
               </View>
               <View className="items-end">
-                <Text className="text-black font-artico-medium text-[30px]">{mockStadium.price}</Text>
-                <Text className="text-gray-500 font-manrope-medium text-xs mt-1">{mockStadium.distance}</Text>
+                <Text className="text-black font-artico-medium text-[30px]">{displayStadium.price}</Text>
+                <Text className="text-gray-500 font-manrope-medium text-xs mt-1">{displayStadium.distance}</Text>
               </View>
             </View>
           </View>
@@ -323,14 +413,14 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
           {/* Field specs */}
           <View className="mb-6">
             <View className="flex-row justify-center mb-2">
-              <InfoCard icon={<TypeOfPitchSvg width={36} height={36} />} label="Покрытие" value={mockStadium.cover} />
+              <InfoCard icon={<TypeOfPitchSvg width={36} height={36} />} label="Покрытие" value={displayStadium.cover} />
               <View className="w-2" />
-              <InfoCard icon={<TypeOfFieldSvg width={36} height={36} />} label="Тип площадки" value={mockStadium.type} />
+              <InfoCard icon={<TypeOfFieldSvg width={36} height={36} />} label="Тип площадки" value={displayStadium.type} />
             </View>
             <View className="flex-row justify-between">
-              <InfoCard icon={<LengthOfFieldSvg width={36} height={36} />} label="Длина х Ширина (м)" value={mockStadium.size} />
+              <InfoCard icon={<LengthOfFieldSvg width={36} height={36} />} label="Длина х Ширина (м)" value={displayStadium.size} />
               <View className="w-2" />
-              <InfoCard icon={<TimeOfWorkSvg width={36} height={36} />} label="Время работы" value={mockStadium.workTime} />
+              <InfoCard icon={<TimeOfWorkSvg width={36} height={36} />} label="Время работы" value={displayStadium.workTime} />
             </View>
           </View>
 
@@ -393,15 +483,15 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
             <Text className="font-artico-medium text-xl mb-4">УДОБСТВО:</Text>
             <View className="flex-row justify-between">
               <View className="space-y-4">
-                <AmenityItem icon={<ParkingSvg width={28} height={28} />} label="Парковка" available={mockStadium.amenities.parking} />
-                <AmenityItem icon={<ShowerSvg width={28} height={28} />} label="Душ" available={mockStadium.amenities.shower} />
+                <AmenityItem icon={<ParkingSvg width={28} height={28} />} label="Парковка" available={displayStadium.amenities.parking} />
+                <AmenityItem icon={<ShowerSvg width={28} height={28} />} label="Душ" available={displayStadium.amenities.shower} />
               </View>
               <View className="space-y-4">
-                <AmenityItem icon={<OutfitChangeSvg width={28} height={28} />} label="Раздевалки" available={mockStadium.amenities.locker} />
-                <AmenityItem icon={<SeatsSvg width={28} height={28} />} label="Трибуны" available={mockStadium.amenities.tribune} />
+                <AmenityItem icon={<OutfitChangeSvg width={28} height={28} />} label="Раздевалки" available={displayStadium.amenities.locker} />
+                <AmenityItem icon={<SeatsSvg width={28} height={28} />} label="Трибуны" available={displayStadium.amenities.tribune} />
               </View>
               <View className="space-y-4">
-                <AmenityItem icon={<LightedSvg width={28} height={28} />} label="Освещение" available={mockStadium.amenities.lighting} />
+                <AmenityItem icon={<LightedSvg width={28} height={28} />} label="Освещение" available={displayStadium.amenities.lighting} />
               </View>
             </View>
           </View>
@@ -429,9 +519,16 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
       {/* Booking modal */}
       <BookingModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={() => !submitting && setModalVisible(false)}
         onSubmit={handleModalSubmit}
+        submitting={submitting}
       />
+
+      {loading && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color="#45AF31" />
+        </View>
+      )}
     </SafeAreaView>
   );
 };

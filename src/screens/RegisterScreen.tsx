@@ -11,6 +11,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import { Input, Container, Button } from '../components/common';
 import LogoWhite from '../../assets/images/logo_white.svg';
+import { useAuth } from '../contexts/AuthContext';
+import { getApiErrorMessage } from '../services/api/client';
 
 type RegisterScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -22,6 +24,7 @@ interface Props {
 }
 
 export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -43,15 +46,19 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     setLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      // Navigate to phone verification with the phone number
-      navigation.navigate('PhoneVerification', {
-        phoneNumber: formData.phoneNumber
+    try {
+      const { phone } = await register({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phoneNumber.trim(),
+        password: formData.password,
       });
-    }, 1000);
+      navigation.navigate('PhoneVerification', { phoneNumber: phone });
+    } catch (err) {
+      Alert.alert('Ошибка регистрации', getApiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

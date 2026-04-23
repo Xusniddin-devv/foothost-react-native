@@ -31,10 +31,10 @@ export type RootStackParamList = {
   PersonalData: undefined;
   AboutUs: undefined;
   PhoneVerification: { phoneNumber: string };
-  BookingStep1: { showSchedule?: boolean } | undefined;
-  BookingStep2: undefined;
-  PaymentScreen: undefined;
-  BookingStep3: undefined;
+  BookingStep1: { showSchedule?: boolean; fieldId?: string } | undefined;
+  BookingStep2: { lobbyId?: string; fieldId?: string } | undefined;
+  PaymentScreen: { lobbyId?: string; amount?: number } | undefined;
+  BookingStep3: { lobbyId?: string } | undefined;
   MatchRating: {
     matchId: string;
     teams: [string, string];

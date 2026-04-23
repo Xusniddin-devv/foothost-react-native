@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,18 +6,29 @@ import {
   Image,
   TouchableOpacity,
   SafeAreaView,
+  Alert,
+  Share,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { lobbiesApi } from '../services/api/lobbies';
+import { fieldsApi } from '../services/api/fields';
+import { getApiErrorMessage } from '../services/api/client';
+import { useLobbySocket } from '../hooks/useLobbySocket';
+import type { Field, Lobby, LobbyPlayer } from '../types/api';
 
 type BookingStep2ScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
   'BookingStep2'
 >;
 
+type BookingStep2ScreenRouteProp = RouteProp<RootStackParamList, 'BookingStep2'>;
+
 interface Props {
   navigation: BookingStep2ScreenNavigationProp;
+  route: BookingStep2ScreenRouteProp;
 }
 
 const mockStadium = {
@@ -132,11 +143,57 @@ const TeamCard = ({
 );
 
 // ── Screen ─────────────────────────────────────────────────────────────────────
-export const BookingStep2Screen: React.FC<Props> = ({ navigation }) => {
-  const [teams, setTeams] = useState<Team[]>(initialTeams);
+export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
+  const lobbyId = route?.params?.lobbyId;
+  const fieldId = route?.params?.fieldId;
+  const [teams] = useState<Team[]>(initialTeams);
+  const [lobby, setLobby] = useState<Lobby | null>(null);
+  const [field, setField] = useState<Field | null>(null);
+  const [players, setPlayers] = useState<LobbyPlayer[]>([]);
+
+  useEffect(() => {
+    if (!lobbyId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [l, p] = await Promise.all([
+          lobbiesApi.get(lobbyId),
+          lobbiesApi.players(lobbyId).catch(() => [] as LobbyPlayer[]),
+        ]);
+        if (cancelled) return;
+        setLobby(l);
+        setPlayers(p);
+        const fId = fieldId ?? l.fieldId;
+        if (fId) {
+          const f = await fieldsApi.get(fId).catch(() => null);
+          if (!cancelled && f) setField(f);
+        }
+      } catch (err) {
+        if (!cancelled) Alert.alert('Ошибка', getApiErrorMessage(err, 'Не удалось загрузить лобби'));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [lobbyId, fieldId]);
+
+  useLobbySocket(lobbyId, {
+    onPlayerJoined: () => {
+      if (lobbyId) lobbiesApi.players(lobbyId).then(setPlayers).catch(() => undefined);
+    },
+    onPlayerLeft: () => {
+      if (lobbyId) lobbiesApi.players(lobbyId).then(setPlayers).catch(() => undefined);
+    },
+    onLobbyUpdated: () => {
+      if (lobbyId) lobbiesApi.get(lobbyId).then(setLobby).catch(() => undefined);
+    },
+  });
 
   const handleAddPlayer = (teamId: number, slotIndex: number) => {
-    // Placeholder — would open player search/invite modal
+    if (!lobbyId) {
+      Alert.alert('Информация', 'Приглашения будут доступны после создания лобби');
+      return;
+    }
     console.log('Add player to team', teamId, 'slot', slotIndex);
   };
 
@@ -144,17 +201,35 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation }) => {
     console.log('Shuffle team', teamId);
   };
 
-  const handlePublish = () => {
-    console.log('Publish lobby');
+  const handlePublish = async () => {
+    if (!lobbyId) {
+      Alert.alert('Ошибка', 'Лобби ещё не создано');
+      return;
+    }
+    try {
+      const updated = await lobbiesApi.publish(lobbyId);
+      setLobby(updated);
+      Alert.alert('Готово', 'Лобби опубликовано');
+    } catch (err) {
+      Alert.alert('Ошибка', getApiErrorMessage(err, 'Не удалось опубликовать лобби'));
+    }
   };
 
-  const handleShare = () => {
-    console.log('Share');
+  const handleShare = async () => {
+    if (!lobby) return;
+    try {
+      await Share.share({
+        message: `Присоединяйся к лобби Foothost! Код: ${lobby.inviteCode ?? lobby.id}`,
+      });
+    } catch {
+      // no-op
+    }
   };
 
   const handleBook = () => {
-    navigation.navigate('BookingStep3');
+    navigation.navigate('BookingStep3', { lobbyId });
   };
+  void players;
 
   return (
     <SafeAreaView className="flex-1 bg-[#F5F5F5]">
@@ -188,23 +263,34 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation }) => {
           >
             <View className="flex-row items-center" style={{ gap: 8 }}>
               <Text className="font-artico-bold text-white text-[22px]" style={{ letterSpacing: 1 }}>
-                {mockStadium.name}
+                {field?.name ?? mockStadium.name}
               </Text>
               <View className="bg-primary rounded-md px-2 py-0.5 flex-row items-center" style={{ gap: 3 }}>
-                <Text className="text-white font-manrope-bold text-sm">{mockStadium.rating}</Text>
+                <Text className="text-white font-manrope-bold text-sm">
+                  {field ? Number(field.rating.toFixed(1)) : mockStadium.rating}
+                </Text>
                 <MaterialCommunityIcons name="star" size={12} color="white" />
               </View>
             </View>
             <View className="flex-row items-center mt-0.5">
               <MaterialCommunityIcons name="map-marker" size={12} color="white" />
-              <Text className="text-white font-manrope-medium text-xs ml-1">{mockStadium.address}</Text>
+              <Text className="text-white font-manrope-medium text-xs ml-1">{field?.address ?? mockStadium.address}</Text>
             </View>
           </View>
         </View>
 
         {/* Price card */}
         <View className="mt-3">
-          <PriceCard total={mockStadium.totalPrice} collected={mockStadium.collectedPrice} onPayPress={() => navigation.navigate('PaymentScreen')} />
+          <PriceCard
+            total={mockStadium.totalPrice}
+            collected={mockStadium.collectedPrice}
+            onPayPress={() =>
+              navigation.navigate('PaymentScreen', {
+                lobbyId,
+                amount: field?.pricePerHour,
+              })
+            }
+          />
         </View>
 
         {/* Teams section */}

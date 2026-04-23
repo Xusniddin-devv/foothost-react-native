@@ -6,11 +6,17 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Dimensions,
+  ActivityIndicator,
+  Alert,
+  Linking,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SuccessModal } from '../components/common';
+import { paymentsApi } from '../services/api/payments';
+import { getApiErrorMessage } from '../services/api/client';
 
 import ClickSvg from '../../assets/images/payments/click.svg';
 import PaymeSvg from '../../assets/images/payments/payme.svg';
@@ -21,8 +27,11 @@ type PaymentScreenNavigationProp = StackNavigationProp<
   'PaymentScreen'
 >;
 
+type PaymentScreenRouteProp = RouteProp<RootStackParamList, 'PaymentScreen'>;
+
 interface Props {
   navigation: PaymentScreenNavigationProp;
+  route: PaymentScreenRouteProp;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -33,17 +42,40 @@ const PAYMENT_METHODS = [
   { key: 'rahmat', label: 'RAHMAT', Icon: RahmatSvg },
 ];
 
-export const PaymentScreen: React.FC<Props> = ({ navigation }) => {
+export const PaymentScreen: React.FC<Props> = ({ navigation, route }) => {
+  const lobbyId = route?.params?.lobbyId;
+  const amountParam = route?.params?.amount;
   const [successVisible, setSuccessVisible] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
-  const handleSelect = (_key: string) => {
-    setSuccessVisible(true);
+  const handleSelect = async (_key: string) => {
+    if (!lobbyId) {
+      setSuccessVisible(true);
+      return;
+    }
+    setProcessing(true);
+    try {
+      const { redirectUrl } = await paymentsApi.initiate(lobbyId);
+      if (redirectUrl) {
+        const can = await Linking.canOpenURL(redirectUrl);
+        if (can) await Linking.openURL(redirectUrl);
+      }
+      setSuccessVisible(true);
+    } catch (err) {
+      Alert.alert('Ошибка оплаты', getApiErrorMessage(err, 'Не удалось инициировать платёж'));
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handleSuccessClose = () => {
     setSuccessVisible(false);
     navigation.navigate('BookingStep1', { showSchedule: true });
   };
+
+  const displayAmount = amountParam
+    ? `${amountParam.toLocaleString('ru-RU')} SUM`
+    : '200.000 SUM';
 
   return (
     <SafeAreaView className="flex-1 bg-black">
@@ -102,7 +134,7 @@ export const PaymentScreen: React.FC<Props> = ({ navigation }) => {
         <View className="items-center pt-4 pb-6">
           <Text className="font-manrope-medium text-sm text-gray-500 mb-2">Стоимость аванса</Text>
           <Text className="font-artico-bold text-[40px] text-text-primary" style={{ lineHeight: 44 }}>
-            200.000 SUM
+            {displayAmount}
           </Text>
         </View>
 
@@ -113,9 +145,10 @@ export const PaymentScreen: React.FC<Props> = ({ navigation }) => {
           {PAYMENT_METHODS.map((method, idx) => (
             <TouchableOpacity
               key={method.key}
-              onPress={() => handleSelect(method.key)}
+              onPress={() => !processing && handleSelect(method.key)}
+              disabled={processing}
               className="flex-row items-center bg-gray-100 rounded-xl px-4 py-3"
-              style={{ marginBottom: idx < PAYMENT_METHODS.length - 1 ? 10 : 0 }}
+              style={{ marginBottom: idx < PAYMENT_METHODS.length - 1 ? 10 : 0, opacity: processing ? 0.6 : 1 }}
               activeOpacity={0.7}
             >
               <View
@@ -127,7 +160,11 @@ export const PaymentScreen: React.FC<Props> = ({ navigation }) => {
               <Text className="flex-1 font-manrope-bold text-base text-text-primary ml-4">
                 {method.label}
               </Text>
-              <MaterialCommunityIcons name="chevron-right" size={22} color="#9E9E9E" />
+              {processing ? (
+                <ActivityIndicator color="#45AF31" />
+              ) : (
+                <MaterialCommunityIcons name="chevron-right" size={22} color="#9E9E9E" />
+              )}
             </TouchableOpacity>
           ))}
         </View>
