@@ -9,6 +9,7 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -16,6 +17,7 @@ import { RootStackParamList } from '../types/navigation';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { fieldsApi } from '../services/api/fields';
 import { lobbiesApi } from '../services/api/lobbies';
+import { bookingsApi } from '../services/api/bookings';
 import { getApiErrorMessage } from '../services/api/client';
 import type { Field, FieldSlot, LobbyType } from '../types/api';
 import ParkingSvg from '../../assets/images/booking/parking.svg';
@@ -48,6 +50,7 @@ const mockStadium = {
   type: 'Открытая',
   size: '20x40',
   workTime: '08:00 - 03:00',
+  mapUrl: null as string | null,
   amenities: {
     parking: false,
     locker: true,
@@ -57,38 +60,15 @@ const mockStadium = {
   },
 };
 
-const mockSchedule = {
-  today: [
-    { time: '07:00 AM - 09:00 AM', available: false },
-    { time: '07:00 AM - 09:00 AM', available: true },
-    { time: '07:00 AM - 09:00 AM', available: false },
-    { time: '07:00 AM - 09:00 AM', available: false },
-    { time: '07:00 AM - 09:00 AM', available: false },
-    { time: '07:00 AM - 09:00 AM', available: false },
-  ],
-  tomorrow: [
-    { time: '07:00 AM - 09:00 AM', available: true },
-    { time: '09:00 AM - 11:00 AM', available: false },
-    { time: '11:00 AM - 01:00 PM', available: false },
-    { time: '01:00 PM - 03:00 PM', available: true },
-    { time: '03:00 PM - 05:00 PM', available: false },
-    { time: '05:00 PM - 07:00 PM', available: false },
-  ],
-  '11.06': [
-    { time: '07:00 AM - 09:00 AM', available: false },
-    { time: '09:00 AM - 11:00 AM', available: false },
-    { time: '11:00 AM - 01:00 PM', available: true },
-    { time: '01:00 PM - 03:00 PM', available: true },
-    { time: '03:00 PM - 05:00 PM', available: false },
-    { time: '05:00 PM - 07:00 PM', available: false },
-  ],
-};
+const DAY_NAMES_RU = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
-const mockDates = [
-  { label: 'Сегодня', value: 'today', day: 'Ср' },
-  { label: 'Завтра', value: 'tomorrow', day: 'Чт' },
-  { label: '11.06', value: '11.06', day: '' },
-];
+type ScheduleOption = {
+  id: string;
+  time: string;
+  available: boolean;
+  bookSlotId: string;
+  reason: 'ok' | 'preference' | 'busy';
+};
 
 const InfoCard = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
   <View className="bg-gray-100 rounded-lg p-3 flex-1 flex-row items-center h-full">
@@ -266,12 +246,31 @@ const BookingModal: React.FC<BookingModalProps> = ({ visible, onClose, onSubmit,
 export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
   const showSchedule = route?.params?.showSchedule === true;
   const fieldId = route?.params?.fieldId;
-  const [selectedDate, setSelectedDate] = useState('today');
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const lobbyId = route?.params?.lobbyId;
+  const dateTabs = useMemo(() => {
+    return [0, 1, 2].map((offset) => {
+      const d = new Date();
+      d.setDate(d.getDate() + offset);
+      const value = d.toISOString().slice(0, 10);
+      if (offset === 0) return { label: 'Сегодня', value, day: DAY_NAMES_RU[d.getDay()] };
+      if (offset === 1) return { label: 'Завтра', value, day: DAY_NAMES_RU[d.getDay()] };
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      return { label: `${day}.${month}`, value, day: '' };
+    });
+  }, []);
+  const [selectedDate, setSelectedDate] = useState(dateTabs[0]?.value ?? new Date().toISOString().slice(0, 10));
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<{
+    id: string;
+    label: string;
+    bookSlotId: string;
+  } | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [field, setField] = useState<Field | null>(null);
-  const [slots, setSlots] = useState<FieldSlot[]>([]);
+  const [scheduleLobby, setScheduleLobby] = useState<Awaited<ReturnType<typeof lobbiesApi.get>> | null>(null);
+  const [slotsByDate, setSlotsByDate] = useState<Record<string, FieldSlot[]>>({});
   const [loading, setLoading] = useState<boolean>(!!fieldId);
 
   useEffect(() => {
@@ -281,11 +280,11 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
       try {
         const [f, s] = await Promise.all([
           fieldsApi.get(fieldId),
-          fieldsApi.slots(fieldId).catch(() => [] as FieldSlot[]),
+          fieldsApi.slots(fieldId, dateTabs[0]?.value).catch(() => [] as FieldSlot[]),
         ]);
         if (cancelled) return;
         setField(f);
-        setSlots(s);
+        setSlotsByDate((prev) => ({ ...prev, [dateTabs[0]?.value ?? '']: s }));
       } catch (err) {
         if (!cancelled) Alert.alert('Ошибка', getApiErrorMessage(err, 'Не удалось загрузить поле'));
       } finally {
@@ -295,7 +294,44 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
     return () => {
       cancelled = true;
     };
-  }, [fieldId]);
+  }, [fieldId, dateTabs]);
+
+  useEffect(() => {
+    if (!showSchedule || !lobbyId) return;
+    let cancelled = false;
+    lobbiesApi
+      .get(lobbyId)
+      .then((l) => {
+        if (!cancelled) setScheduleLobby(l);
+      })
+      .catch(() => {
+        if (!cancelled) setScheduleLobby(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showSchedule, lobbyId]);
+
+  useEffect(() => {
+    if (!fieldId || !showSchedule) return;
+    if (slotsByDate[selectedDate]) return;
+    let cancelled = false;
+    fieldsApi
+      .slots(fieldId, selectedDate)
+      .then((s) => {
+        if (!cancelled) {
+          setSlotsByDate((prev) => ({ ...prev, [selectedDate]: s }));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSlotsByDate((prev) => ({ ...prev, [selectedDate]: [] }));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fieldId, selectedDate, showSchedule, slotsByDate]);
 
   const displayStadium = useMemo(() => {
     if (!field) return mockStadium;
@@ -303,8 +339,8 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
     return {
       name: field.name,
       address: field.address,
-      distance: `${field.reviewsCount} отзывов`,
-      rating: Number(field.rating.toFixed(1)),
+      distance: `${Number(field.reviewsCount ?? 0)} отзывов`,
+      rating: Number((field.rating ?? 0).toFixed(1)),
       price: `${field.pricePerHour.toLocaleString('ru-RU')} СУМ`,
       image: field.photos?.[0] ? { uri: field.photos[0] } : mockStadium.image,
       cover: field.description ?? mockStadium.cover,
@@ -318,16 +354,130 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
         tribune: amenities.tribune ?? false,
         lighting: amenities.lighting ?? false,
       },
+      mapUrl: field.mapUrl ?? null,
     };
   }, [field]);
 
+  function extractLatLng(mapUrl: string): { lat: number; lng: number } | null {
+    const decoded = decodeURIComponent(mapUrl);
+    const llMatch = decoded.match(/[?&]ll=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (llMatch) {
+      return { lng: Number(llMatch[1]), lat: Number(llMatch[2]) };
+    }
+
+    const googleMatch = decoded.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (googleMatch) {
+      return { lat: Number(googleMatch[1]), lng: Number(googleMatch[2]) };
+    }
+
+    const queryMatch = decoded.match(/[?&](?:q|query)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (queryMatch) {
+      return { lat: Number(queryMatch[1]), lng: Number(queryMatch[2]) };
+    }
+
+    return null;
+  }
+
+  const mapPreviewUrl = useMemo(() => {
+    if (!displayStadium.mapUrl) return null;
+    const coords = extractLatLng(displayStadium.mapUrl);
+    if (!coords) return null;
+    return `https://static-maps.yandex.ru/1.x/?lang=ru_RU&ll=${coords.lng},${coords.lat}&size=650,300&z=15&l=map&pt=${coords.lng},${coords.lat},pm2rdm`;
+  }, [displayStadium.mapUrl]);
+
+  const openMap = useCallback(async () => {
+    if (!displayStadium.mapUrl) return;
+    const supported = await Linking.canOpenURL(displayStadium.mapUrl);
+    if (!supported) {
+      Alert.alert('Ошибка', 'Не удалось открыть ссылку карты');
+      return;
+    }
+    await Linking.openURL(displayStadium.mapUrl);
+  }, [displayStadium.mapUrl]);
+
+  const currentSchedule = useMemo<ScheduleOption[]>(() => {
+    const slots = slotsByDate[selectedDate] ?? [];
+    const formatter = new Intl.DateTimeFormat('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    if (slots.length === 0) return [];
+
+    const preferredHours = Math.max(1, scheduleLobby?.durationHours ?? 1);
+    const firstStart = new Date(slots[0].startTime).getTime();
+    const firstEnd = new Date(slots[0].endTime).getTime();
+    const slotMinutes = Math.max(1, Math.round((firstEnd - firstStart) / 60000));
+    const unitsNeeded = Math.max(1, Math.round((preferredHours * 60) / slotMinutes));
+
+    if (unitsNeeded <= 1) {
+      return slots.map((slot) => {
+        const start = formatter.format(new Date(slot.startTime));
+        const end = formatter.format(new Date(slot.endTime));
+        return {
+          id: slot.id,
+          time: `${start} - ${end}`,
+          available: slot.status === 'available',
+          bookSlotId: slot.id,
+          reason: slot.status === 'available' ? 'ok' : 'busy',
+        };
+      });
+    }
+
+    const composed: ScheduleOption[] = [];
+
+    for (let i = 0; i + unitsNeeded - 1 < slots.length; i += 1) {
+      const window = slots.slice(i, i + unitsNeeded);
+      const contiguous = window.every((slot, idx) => {
+        if (idx === 0) return true;
+        return new Date(slot.startTime).getTime() === new Date(window[idx - 1].endTime).getTime();
+      });
+      if (!contiguous) continue;
+
+      const hasAvailable = window.some((slot) => slot.status === 'available');
+      const allAvailable = window.every((slot) => slot.status === 'available');
+      const start = formatter.format(new Date(window[0].startTime));
+      const end = formatter.format(new Date(window[window.length - 1].endTime));
+
+      composed.push({
+        id: `${window[0].id}-${window[window.length - 1].id}`,
+        time: `${start} - ${end}`,
+        available: allAvailable,
+        bookSlotId: window[0].id,
+        reason: allAvailable ? 'ok' : hasAvailable ? 'preference' : 'busy',
+      });
+    }
+
+    return composed;
+  }, [selectedDate, slotsByDate, scheduleLobby?.durationHours]);
+
   React.useEffect(() => {
     if (!showSchedule) return;
-    const available = mockSchedule[selectedDate as keyof typeof mockSchedule]?.find((s) => s.available);
-    setSelectedTimeSlot(available ? available.time : null);
-  }, [selectedDate, showSchedule]);
+    const available = currentSchedule.find((s) => s.available);
+    setSelectedTimeSlot(
+      available
+        ? { id: available.id, label: available.time, bookSlotId: available.bookSlotId }
+        : null,
+    );
+  }, [currentSchedule, selectedDate, showSchedule]);
 
-  const currentSchedule = mockSchedule[selectedDate as keyof typeof mockSchedule];
+  const handleConfirmBooking = useCallback(async () => {
+    if (!showSchedule || !lobbyId || !selectedTimeSlot) return;
+    setBookingSubmitting(true);
+    try {
+      await bookingsApi.book(lobbyId, selectedTimeSlot.bookSlotId);
+      Alert.alert('Успешно', 'Слот успешно забронирован', [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('Profile'),
+        },
+      ]);
+    } catch (err) {
+      Alert.alert('Ошибка', getApiErrorMessage(err, 'Не удалось забронировать слот'));
+    } finally {
+      setBookingSubmitting(false);
+    }
+  }, [showSchedule, lobbyId, selectedTimeSlot, navigation]);
 
   const handleModalSubmit = useCallback(
     async (players: number, teams: number, hours: number, gameType: GameType) => {
@@ -359,7 +509,6 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
     [fieldId, navigation],
   );
 
-  void slots;
   const canCreateLobby = Boolean(fieldId);
 
   return (
@@ -430,12 +579,12 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
           {showSchedule && <View className="mb-6">
             <Text className="text-black font-artico-medium text-xl mb-3">РАСПИСАНИЕ:</Text>
             <View className="flex-row justify-between mb-4">
-              {mockDates.map((date, idx) => (
+              {dateTabs.map((date, idx) => (
                 <TouchableOpacity
                   key={date.value}
                   className={`flex-1 rounded-lg py-2 items-center ${
                     selectedDate === date.value ? 'bg-primary' : 'bg-white border border-[#758A80]'
-                  }${idx !== mockDates.length - 1 ? ' mr-2' : ''}`}
+                  }${idx !== dateTabs.length - 1 ? ' mr-2' : ''}`}
                   onPress={() => setSelectedDate(date.value)}
                 >
                   <Text className={`font-bold text-sm ${selectedDate === date.value ? 'text-white' : 'text-black'}`}>
@@ -449,35 +598,54 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
                 </TouchableOpacity>
               ))}
             </View>
-            <View>
-              {Array.from({ length: Math.ceil(currentSchedule.length / 2) }).map((_, rowIndex) => (
-                <View key={rowIndex} className="flex-row justify-between mb-2">
-                  {currentSchedule.slice(rowIndex * 2, rowIndex * 2 + 2).map((slot, slotIndex) => {
-                    const isSelected = selectedTimeSlot === slot.time && slot.available;
-                    return (
-                      <TouchableOpacity
-                        key={slotIndex}
-                        className={`w-[49%] rounded-lg p-2 items-center justify-center h-16
-                          ${!slot.available ? 'bg-gray-100 border border-[#758A80]' : ''}
-                          ${slot.available && !isSelected ? 'bg-white border border-green-600' : ''}
-                          ${isSelected ? 'bg-primary border border-green-600' : ''}
-                        `}
-                        onPress={() => slot.available && setSelectedTimeSlot(slot.time)}
-                        disabled={!slot.available}
-                      >
-                        <Text className={`font-bold text-sm ${!slot.available ? 'text-gray-400' : isSelected ? 'text-white' : 'text-green-600'}`}>
-                          {slot.time}
-                        </Text>
-                        <Text className={`text-xs ${!slot.available ? 'text-gray-400' : isSelected ? 'text-white' : 'text-green-600'}`}>
-                          {slot.available ? 'Свободно' : 'Мест Нет'}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                  {currentSchedule.slice(rowIndex * 2, rowIndex * 2 + 2).length === 1 && <View className="w-[49%]" />}
-                </View>
-              ))}
-            </View>
+            {currentSchedule.length === 0 ? (
+              <View className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <Text className="text-center font-manrope-medium text-sm text-gray-500">
+                  Нет доступных слотов на выбранную дату
+                </Text>
+              </View>
+            ) : (
+              <View>
+                {Array.from({ length: Math.ceil(currentSchedule.length / 2) }).map((_, rowIndex) => (
+                  <View key={rowIndex} className="flex-row justify-between mb-2">
+                    {currentSchedule.slice(rowIndex * 2, rowIndex * 2 + 2).map((slot) => {
+                      const isSelected = selectedTimeSlot?.id === slot.id && slot.available;
+                      return (
+                        <TouchableOpacity
+                          key={slot.id}
+                          className={`w-[49%] rounded-lg p-2 items-center justify-center h-16
+                            ${!slot.available ? 'bg-gray-100 border border-[#758A80]' : ''}
+                            ${slot.available && !isSelected ? 'bg-white border border-green-600' : ''}
+                            ${isSelected ? 'bg-primary border border-green-600' : ''}
+                          `}
+                          onPress={() =>
+                            slot.available &&
+                            setSelectedTimeSlot({
+                              id: slot.id,
+                              label: slot.time,
+                              bookSlotId: slot.bookSlotId,
+                            })
+                          }
+                          disabled={!slot.available}
+                        >
+                          <Text className={`font-bold text-sm ${!slot.available ? 'text-gray-400' : isSelected ? 'text-white' : 'text-green-600'}`}>
+                            {slot.time}
+                          </Text>
+                          <Text className={`text-xs ${!slot.available ? 'text-gray-400' : isSelected ? 'text-white' : 'text-green-600'}`}>
+                            {slot.available
+                              ? 'Свободно'
+                              : slot.reason === 'preference'
+                                ? 'Недоступно для вашего выбора'
+                                : 'Мест Нет'}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                    {currentSchedule.slice(rowIndex * 2, rowIndex * 2 + 2).length === 1 && <View className="w-[49%]" />}
+                  </View>
+                ))}
+              </View>
+            )}
           </View>}
 
           {/* Amenities */}
@@ -501,7 +669,24 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
           {/* Location */}
           <View className="mb-32">
             <Text className="font-artico-medium text-xl mb-3">МЕСТОПОЛОЖЕНИЕ:</Text>
-            <Image source={require('../../assets/images/map-placeholder.png')} className="w-full h-40 rounded-xl" />
+            {mapPreviewUrl ? (
+              <TouchableOpacity onPress={openMap} activeOpacity={0.85}>
+                <Image source={{ uri: mapPreviewUrl }} className="w-full h-40 rounded-xl" resizeMode="cover" />
+              </TouchableOpacity>
+            ) : displayStadium.mapUrl ? (
+              <TouchableOpacity
+                onPress={openMap}
+                activeOpacity={0.85}
+                className="w-full h-40 rounded-xl border border-gray-200 bg-gray-50 items-center justify-center px-4"
+              >
+                <MaterialCommunityIcons name="map-marker" size={28} color="#45AF31" />
+                <Text className="font-manrope-semibold text-sm text-text-primary mt-2 text-center">
+                  Открыть в Яндекс/Google Maps
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <Image source={require('../../assets/images/map-placeholder.png')} className="w-full h-40 rounded-xl" />
+            )}
           </View>
         </Container>
       </ScrollView>
@@ -509,13 +694,28 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
       {/* Sticky button */}
       <View className="absolute bottom-0 left-0 right-0 px-4 pt-2 pb-6 bg-white">
         <TouchableOpacity
-          className={`rounded-xl py-4 items-center ${(!showSchedule || selectedTimeSlot) && canCreateLobby ? 'bg-primary' : 'bg-gray-300'}`}
-          onPress={() => (!showSchedule || selectedTimeSlot) && canCreateLobby && setModalVisible(true)}
-          disabled={(showSchedule && !selectedTimeSlot) || !canCreateLobby}
+          className={`rounded-xl py-4 items-center ${
+            (!showSchedule || selectedTimeSlot) && canCreateLobby && !bookingSubmitting ? 'bg-primary' : 'bg-gray-300'
+          }`}
+          onPress={() => {
+            if (!canCreateLobby) return;
+            if (showSchedule) {
+              if (selectedTimeSlot && !bookingSubmitting) void handleConfirmBooking();
+              return;
+            }
+            setModalVisible(true);
+          }}
+          disabled={(showSchedule && !selectedTimeSlot) || !canCreateLobby || bookingSubmitting}
           activeOpacity={0.7}
         >
           <Text className="text-white font-manrope-bold text-base">
-            {canCreateLobby ? 'Создать лобби' : 'Сначала выберите стадион'}
+            {canCreateLobby
+              ? showSchedule
+                ? bookingSubmitting
+                  ? 'Бронирование...'
+                  : 'Забронировать'
+                : 'Создать лобби'
+              : 'Сначала выберите стадион'}
           </Text>
         </TouchableOpacity>
       </View>

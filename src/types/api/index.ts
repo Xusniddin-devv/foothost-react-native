@@ -2,6 +2,7 @@ export type UserRole = 'player' | 'field_owner' | 'both';
 
 export interface User {
   id: string;
+  username?: string | null;
   phone: string | null;
   firstName: string;
   lastName: string;
@@ -55,6 +56,7 @@ export interface Field {
   pitchType: string | null;
   dimensions: string | null;
   workTime: string | null;
+  mapUrl: string | null;
   photos: string[];
   rating: number;
   reviewsCount: number;
@@ -64,9 +66,9 @@ export interface Field {
 export interface FieldSlot {
   id: string;
   fieldId: string;
-  startAt: string;
-  endAt: string;
-  isBooked: boolean;
+  startTime: string;
+  endTime: string;
+  status: 'available' | 'locked' | 'booked';
 }
 
 export type LobbyType = 'open' | 'invite_only' | 'closed';
@@ -100,6 +102,9 @@ export interface LobbyPlayer {
   lobbyId: string;
   userId: string;
   teamId: string | null;
+  status: 'invited' | 'pending' | 'approved';
+  invitedByUserId?: string | null;
+  user?: Pick<User, 'id' | 'firstName' | 'lastName' | 'phone' | 'avatarUrl'>;
   joinedAt: string;
 }
 

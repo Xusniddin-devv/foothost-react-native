@@ -54,6 +54,9 @@ export async function apiRequest<T>(
 /** Extracts a user-facing message from an axios error. */
 export function getApiErrorMessage(err: unknown, fallback = 'Something went wrong'): string {
   if (axios.isAxiosError(err)) {
+    if (!err.response && err.message === 'Network Error') {
+      return `Network Error (API: ${API_BASE_URL})`;
+    }
     const data = err.response?.data as unknown;
     if (data && typeof data === 'object') {
       const msg = (data as { message?: unknown }).message;

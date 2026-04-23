@@ -49,4 +49,26 @@ export const lobbiesApi = {
       method: 'PATCH',
       url: `/lobbies/${id}/teams/${teamId}/join`,
     }),
+  invite: (id: string, userId: string, teamId?: string) =>
+    apiRequest<LobbyPlayer>({
+      method: 'POST',
+      url: `/lobbies/${id}/invite/${userId}`,
+      params: teamId ? { teamId } : undefined,
+    }),
+  joinRequests: (id: string) =>
+    apiRequest<LobbyPlayer[]>({
+      method: 'GET',
+      url: `/lobbies/${id}/requests`,
+    }),
+  approveJoinRequest: (id: string, userId: string) =>
+    apiRequest<LobbyPlayer>({
+      method: 'POST',
+      url: `/lobbies/${id}/requests/${userId}/approve`,
+    }),
+  updateType: (id: string, type: LobbyType) =>
+    apiRequest<Lobby>({
+      method: 'PATCH',
+      url: `/lobbies/${id}/type`,
+      data: { type },
+    }),
 };

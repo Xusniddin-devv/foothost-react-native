@@ -4,15 +4,27 @@ import type { User } from '../../types/api';
 export interface UpdateUserDto {
   firstName?: string;
   lastName?: string;
+  username?: string | null;
   position?: string | null;
   expoPushToken?: string;
   avatarUrl?: string | null;
+}
+
+export interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export const usersApi = {
   me: () => apiRequest<User>({ method: 'GET', url: '/users/me' }),
   update: (dto: UpdateUserDto) =>
     apiRequest<User>({ method: 'PATCH', url: '/users/me', data: dto }),
+  changePassword: (dto: ChangePasswordDto) =>
+    apiRequest<{ message: string }>({
+      method: 'PATCH',
+      url: '/users/me/password',
+      data: dto,
+    }),
   switchRole: () =>
     apiRequest<User>({ method: 'POST', url: '/users/me/switch-role' }),
   removeAvatar: () =>

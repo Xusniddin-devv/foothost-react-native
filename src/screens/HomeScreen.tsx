@@ -142,6 +142,7 @@ import {
 // Import SVG files
 import Logo from '../../assets/images/logo_white.svg';
 import Bell from '../../assets/images/homepage/bell-white.svg';
+const FALLBACK_FIELD_IMAGE = require('../../assets/images/homepage/homepage.png');
 
 
 export const HomeScreen: React.FC = () => {
@@ -254,21 +255,17 @@ export const HomeScreen: React.FC = () => {
         <Container padding="sm">
           <SectionHeader 
             title="РЕКОМЕНДУЕМЫЕ ЛОББИ"
-            onViewAll={() => console.log('View all fields')}
+            onViewAll={() => navigation.navigate('StadiumList')}
           />
 
           {topField ? (
             <FieldCard
               name={topField.name}
               location={topField.address}
-              rating={Number(topField.rating.toFixed(1))}
-              distance={`${topField.reviewsCount} отзывов`}
-              image={
-                topField.photos?.[0]
-                  ? { uri: topField.photos[0] }
-                  : undefined
-              }
-              onPress={() => console.log('Field pressed')}
+              rating={Number((topField.rating ?? 0).toFixed(1))}
+              distance={`${topField.reviewsCount ?? 0} отзывов`}
+              image={topField.photos?.[0] ? { uri: topField.photos[0] } : FALLBACK_FIELD_IMAGE}
+              onPress={() => navigation.navigate('BookingStep1', { fieldId: topField.id })}
               roundedBottom={true}
             />
           ) : (
