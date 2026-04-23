@@ -11,6 +11,7 @@ import { Team } from './teams/team.entity';
 import { Payment } from './payments/payment.entity';
 import { Booking } from './bookings/booking.entity';
 import { Review } from './reviews/review.entity';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { Review } from './reviews/review.entity';
       synchronize: process.env.NODE_ENV !== 'production',
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     }),
+    AuthModule,
   ],
 })
 export class AppModule {}
