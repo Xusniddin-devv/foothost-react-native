@@ -11,6 +11,6 @@ export class User {
   @Column() passwordHash!: string;
   @Column({ type: 'varchar', default: 'player' }) role!: UserRole;
   @Column({ default: false }) isPhoneVerified!: boolean;
-  @Column({ nullable: true }) expoPushToken!: string;
+  @Column({ nullable: true }) expoPushToken!: string | null;
   @CreateDateColumn() createdAt!: Date;
 }

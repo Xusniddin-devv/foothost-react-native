@@ -12,6 +12,6 @@ export class Review {
   @ManyToOne(() => User) @JoinColumn({ name: 'authorId' }) author!: User;
   @Column({ type: 'smallint' }) fieldRating!: number;
   @Column({ type: 'smallint' }) matchRating!: number;
-  @Column({ nullable: true }) comment!: string;
+  @Column({ nullable: true }) comment!: string | null;
   @CreateDateColumn() createdAt!: Date;
 }

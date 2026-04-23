@@ -1,9 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Field } from './field.entity';
 
 export type SlotStatus = 'available' | 'locked' | 'booked';
 
 @Entity('field_slots')
+@Index(['fieldId', 'startTime'])
 export class FieldSlot {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column() fieldId!: string;

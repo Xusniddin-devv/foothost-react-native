@@ -8,7 +8,7 @@ export class LobbyPlayer {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column() lobbyId!: string;
   @Column() userId!: string;
-  @Column({ nullable: true }) teamId!: string;
+  @Column({ nullable: true }) teamId!: string | null;
   @ManyToOne(() => Lobby) @JoinColumn({ name: 'lobbyId' }) lobby!: Lobby;
   @ManyToOne(() => User) @JoinColumn({ name: 'userId' }) user!: User;
   @CreateDateColumn() joinedAt!: Date;

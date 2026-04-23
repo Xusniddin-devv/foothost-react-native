@@ -14,6 +14,6 @@ export class Payment {
   @ManyToOne(() => User) @JoinColumn({ name: 'userId' }) user!: User;
   @Column({ type: 'int' }) amount!: number;
   @Column({ type: 'varchar', default: 'pending' }) status!: PaymentStatus;
-  @Column({ nullable: true }) providerRef!: string;
-  @Column({ type: 'timestamptz', nullable: true }) paidAt!: Date;
+  @Column({ nullable: true }) providerRef!: string | null;
+  @Column({ type: 'timestamptz', nullable: true }) paidAt!: Date | null;
 }

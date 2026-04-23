@@ -8,13 +8,13 @@ export class Field {
   @ManyToOne(() => User) @JoinColumn({ name: 'ownerId' }) owner!: User;
   @Column() name!: string;
   @Column() address!: string;
-  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true }) lat!: number;
-  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true }) lng!: number;
+  @Column({ type: 'real', nullable: true, default: null }) lat!: number | null;
+  @Column({ type: 'real', nullable: true, default: null }) lng!: number | null;
   @Column({ type: 'int' }) pricePerHour!: number;
   @Column({ type: 'int', default: 60 }) slotDuration!: number;
   @Column({ type: 'jsonb', default: {} }) amenities!: Record<string, boolean>;
   @Column({ type: 'text', array: true, default: [] }) photos!: string[];
-  @Column({ nullable: true }) description!: string;
-  @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 }) rating!: number;
+  @Column({ nullable: true }) description!: string | null;
+  @Column({ type: 'real', default: 0 }) rating!: number;
   @CreateDateColumn() createdAt!: Date;
 }
