@@ -32,4 +32,10 @@ export const usersApi = {
     });
     return res.data;
   },
+  friends: (q?: string) =>
+    apiRequest<User[]>({
+      method: 'GET',
+      url: '/users/friends',
+      params: q?.trim() ? { q: q.trim() } : undefined,
+    }),
 };

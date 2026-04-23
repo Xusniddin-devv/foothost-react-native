@@ -280,18 +280,22 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   const refreshLobbyDetails = async () => {
     if (!selectedLobby) return;
-    const [freshLobby, freshPlayers, freshTeams] = await Promise.all([
-      lobbiesApi.get(selectedLobby.id),
-      lobbiesApi.players(selectedLobby.id),
-      lobbiesApi.teams(selectedLobby.id),
-    ]);
-    setSelectedLobby(freshLobby);
-    setSelectedLobbyPlayers(freshPlayers);
-    setSelectedLobbyTeams(freshTeams);
-    setLobbyJoinedCount((prev) => ({
-      ...prev,
-      [selectedLobby.id]: freshPlayers.filter((p) => p.status === 'approved').length,
-    }));
+    try {
+      const [freshLobby, freshPlayers, freshTeams] = await Promise.all([
+        lobbiesApi.get(selectedLobby.id),
+        lobbiesApi.players(selectedLobby.id),
+        lobbiesApi.teams(selectedLobby.id),
+      ]);
+      setSelectedLobby(freshLobby);
+      setSelectedLobbyPlayers(freshPlayers);
+      setSelectedLobbyTeams(freshTeams);
+      setLobbyJoinedCount((prev) => ({
+        ...prev,
+        [selectedLobby.id]: freshPlayers.filter((p) => p.status === 'approved').length,
+      }));
+    } catch {
+      // silently ignore refresh failure; primary action already succeeded
+    }
   };
 
   const handleInviteFriend = async (friendId: string) => {
