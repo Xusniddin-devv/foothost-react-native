@@ -542,7 +542,8 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
       <Modal visible={!!selectedLobby} transparent animationType="slide" onRequestClose={closeLobbyDetails}>
         <View className="flex-1 justify-end bg-black/40">
-          <View className="rounded-t-3xl bg-white px-4 pb-8 pt-4">
+          <View className="rounded-t-3xl bg-white px-4 pt-4" style={{ maxHeight: '90%' }}>
+            {/* Fixed header */}
             <View className="mb-3 flex-row items-center justify-between">
               <Text className="font-artico-bold text-[20px] text-text-primary">Детали лобби</Text>
               <TouchableOpacity onPress={closeLobbyDetails}>
@@ -550,100 +551,191 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            {selectedLobby ? (
-              <>
-                <Image
-                  source={
-                    selectedField?.photos?.[0]
-                      ? { uri: selectedField.photos[0] }
-                      : require('../../assets/images/stadium/stadium.png')
-                  }
-                  style={{ width: '100%', height: 140, borderRadius: 12 }}
-                  resizeMode="cover"
-                />
-                <Text className="font-manrope-bold text-base text-text-primary">
-                  {selectedField?.name ?? 'Лобби'}
-                </Text>
-                <Text className="mt-1 font-manrope-medium text-xs text-gray-500">
-                  {selectedField?.address ?? '—'}
-                </Text>
-                <Text className="mt-1 font-manrope-medium text-xs text-gray-500">
-                  Тип: {selectedLobby.type === 'open' ? 'Открытое' : selectedLobby.type === 'invite_only' ? 'По приглашению' : 'Закрытое'}
-                </Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+              {selectedLobby ? (
+                <>
+                  {/* Hero image */}
+                  <Image
+                    source={
+                      selectedField?.photos?.[0]
+                        ? { uri: selectedField.photos[0] }
+                        : require('../../assets/images/stadium/stadium.png')
+                    }
+                    style={{ width: '100%', height: 140, borderRadius: 12 }}
+                    resizeMode="cover"
+                  />
 
-                <View className="mt-4 rounded-xl border border-gray-200 p-3">
-                  <Text className="font-manrope-semibold text-sm text-text-primary">
-                    Игроки: {lobbyJoinedCount[selectedLobby.id] ?? 0}/{selectedLobby.maxPlayers}
-                  </Text>
-                  <Text className="mt-1 font-manrope-semibold text-sm text-text-primary">
-                    Оплачено: {Number(selectedLobby.confirmedTotal ?? 0).toLocaleString('ru-RU')} / {Number(selectedLobby.totalAmount ?? 0).toLocaleString('ru-RU')} сум
-                  </Text>
-                </View>
-
-                <View className="mt-4 rounded-xl border border-gray-200 p-3">
-                  <Text className="mb-2 font-manrope-semibold text-sm text-text-primary">Названия команд</Text>
-                  {detailsLoading ? (
-                    <Text className="font-manrope-medium text-xs text-gray-500">Загрузка...</Text>
-                  ) : selectedLobbyTeams.length > 0 ? (
-                    selectedLobbyTeams.map((team) => (
-                      <Text key={team.id} className="mb-1 font-manrope-medium text-sm text-text-primary">
-                        • {team.name}
-                      </Text>
-                    ))
-                  ) : (
-                    <Text className="font-manrope-medium text-xs text-gray-500">Команды еще не назначены</Text>
-                  )}
-                </View>
-
-                <View className="mt-4 rounded-xl border border-gray-200 p-3">
-                  <Text className="mb-2 font-manrope-semibold text-sm text-text-primary">Игроки лобби</Text>
-                  {selectedLobbyPlayers.length > 0 ? (
-                    selectedLobbyPlayers
-                      .filter((p) => p.status === 'approved')
-                      .map((player) => (
-                        <View key={player.userId} className="mb-2 flex-row items-center justify-between">
-                          <Text className="font-manrope-medium text-sm text-text-primary">
-                            {player.user?.firstName ?? 'Игрок'} {player.user?.lastName ?? ''}
-                          </Text>
-                          {isCreator && player.userId !== user?.id ? (
-                            <TouchableOpacity onPress={() => handleKickPlayer(player.userId)} className="rounded-lg border border-red-300 px-2 py-1">
-                              <Text className="font-manrope-semibold text-xs text-red-500">Удалить</Text>
-                            </TouchableOpacity>
-                          ) : null}
-                        </View>
-                      ))
-                  ) : (
-                    <Text className="font-manrope-medium text-xs text-gray-500">Игроков нет</Text>
-                  )}
-                </View>
-
-                {isCreator ? (
-                  <View className="mt-4">
-                    <Text className="mb-2 font-manrope-semibold text-sm text-text-primary">Управление лобби</Text>
-                    <View className="mb-2 flex-row" style={{ gap: 8 }}>
-                      {([
-                        { key: 'open', label: 'Открытое' },
-                        { key: 'invite_only', label: 'По приглашению' },
-                        { key: 'closed', label: 'Закрытое' },
-                      ] as Array<{ key: LobbyType; label: string }>).map((option) => (
-                        <TouchableOpacity
-                          key={option.key}
-                          onPress={() => void handleChangeType(option.key)}
-                          className={`rounded-lg px-3 py-2 ${selectedLobby.type === option.key ? 'bg-primary' : 'border border-gray-300'}`}
-                        >
-                          <Text className={`text-xs font-manrope-semibold ${selectedLobby.type === option.key ? 'text-white' : 'text-text-primary'}`}>
-                            {option.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                    <TouchableOpacity onPress={() => { setFriendQuery(''); setInviteModal(true); }} className="rounded-xl bg-primary py-3">
-                      <Text className="text-center font-manrope-bold text-sm text-white">Пригласить игрока</Text>
-                    </TouchableOpacity>
+                  {/* Name + rating */}
+                  <View className="flex-row items-center mt-3">
+                    <Text className="font-artico-medium text-2xl text-text-primary flex-shrink">{selectedField?.name ?? 'Лобби'}</Text>
+                    {selectedField?.rating != null && (
+                      <View className="bg-primary rounded-md px-2 py-1 ml-2 flex-row items-center">
+                        <Text className="text-white font-bold text-sm mr-1">{Number(selectedField.rating).toFixed(1)}</Text>
+                        <MaterialCommunityIcons name="star" size={14} color="white" />
+                      </View>
+                    )}
                   </View>
-                ) : null}
-              </>
-            ) : null}
+
+                  {/* Address */}
+                  <View className="flex-row items-center mt-1">
+                    <MaterialCommunityIcons name="map-marker" size={14} color="#666" />
+                    <Text className="text-gray-500 font-manrope-medium text-xs ml-1">{selectedField?.address ?? '—'}</Text>
+                  </View>
+
+                  {/* Price + reviews */}
+                  <View className="flex-row items-center justify-between mt-1">
+                    <Text className="font-artico-medium text-xl text-text-primary">
+                      {selectedField?.pricePerHour != null ? `${Number(selectedField.pricePerHour).toLocaleString('ru-RU')} СУМ` : '—'}
+                    </Text>
+                    <Text className="font-manrope-medium text-xs text-gray-500">
+                      {selectedField?.reviewsCount != null ? `${selectedField.reviewsCount} отзывов` : ''}
+                    </Text>
+                  </View>
+
+                  {/* Lobby type */}
+                  <Text className="mt-1 font-manrope-medium text-xs text-gray-500">
+                    Тип: {selectedLobby.type === 'open' ? 'Открытое' : selectedLobby.type === 'invite_only' ? 'По приглашению' : 'Закрытое'}
+                  </Text>
+
+                  {/* Field specs */}
+                  <View className="mt-4 mb-2">
+                    <View className="flex-row mb-2">
+                      <InfoCard icon={<TypeOfPitchSvg width={36} height={36} />} label="Покрытие" value={selectedField?.description ?? '—'} />
+                      <View className="w-2" />
+                      <InfoCard icon={<TypeOfFieldSvg width={36} height={36} />} label="Тип площадки" value={selectedField?.pitchType ?? '—'} />
+                    </View>
+                    <View className="flex-row">
+                      <InfoCard icon={<LengthOfFieldSvg width={36} height={36} />} label="Длина х Ширина (м)" value={selectedField?.dimensions ?? '—'} />
+                      <View className="w-2" />
+                      <InfoCard icon={<TimeOfWorkSvg width={36} height={36} />} label="Время работы" value={selectedField?.workTime ?? '—'} />
+                    </View>
+                  </View>
+
+                  {/* Amenities */}
+                  {(() => {
+                    const amenities = (selectedField?.amenities ?? {}) as Record<string, boolean>;
+                    return (
+                      <View className="mt-4 mb-2">
+                        <Text className="font-artico-medium text-base mb-3">УДОБСТВО:</Text>
+                        <View className="flex-row justify-between">
+                          <View style={{ gap: 12 }}>
+                            <AmenityItem icon={<ParkingSvg width={28} height={28} />} label="Парковка" available={amenities.parking ?? false} />
+                            <AmenityItem icon={<ShowerSvg width={28} height={28} />} label="Душ" available={amenities.shower ?? false} />
+                          </View>
+                          <View style={{ gap: 12 }}>
+                            <AmenityItem icon={<OutfitChangeSvg width={28} height={28} />} label="Раздевалки" available={amenities.locker ?? false} />
+                            <AmenityItem icon={<SeatsSvg width={28} height={28} />} label="Трибуны" available={amenities.tribune ?? false} />
+                          </View>
+                          <View style={{ gap: 12 }}>
+                            <AmenityItem icon={<LightedSvg width={28} height={28} />} label="Освещение" available={amenities.lighting ?? false} />
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })()}
+
+                  {/* Map */}
+                  <View className="mt-4 mb-4">
+                    <Text className="font-artico-medium text-base mb-3">МЕСТОПОЛОЖЕНИЕ:</Text>
+                    {mapPreviewUrl ? (
+                      <TouchableOpacity onPress={openMap} activeOpacity={0.85}>
+                        <Image source={{ uri: mapPreviewUrl }} style={{ width: '100%', height: 160, borderRadius: 12 }} resizeMode="cover" />
+                      </TouchableOpacity>
+                    ) : selectedField?.mapUrl ? (
+                      <TouchableOpacity
+                        onPress={openMap}
+                        activeOpacity={0.85}
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50 items-center justify-center px-4"
+                        style={{ height: 160 }}
+                      >
+                        <MaterialCommunityIcons name="map-marker" size={28} color="#45AF31" />
+                        <Text className="font-manrope-semibold text-sm text-text-primary mt-2 text-center">
+                          Открыть в Яндекс/Google Maps
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Image source={require('../../assets/images/map-placeholder.png')} style={{ width: '100%', height: 160, borderRadius: 12 }} resizeMode="cover" />
+                    )}
+                  </View>
+
+                  {/* Players / payment */}
+                  <View className="mt-4 rounded-xl border border-gray-200 p-3">
+                    <Text className="font-manrope-semibold text-sm text-text-primary">
+                      Игроки: {lobbyJoinedCount[selectedLobby.id] ?? 0}/{selectedLobby.maxPlayers}
+                    </Text>
+                    <Text className="mt-1 font-manrope-semibold text-sm text-text-primary">
+                      Оплачено: {Number(selectedLobby.confirmedTotal ?? 0).toLocaleString('ru-RU')} / {Number(selectedLobby.totalAmount ?? 0).toLocaleString('ru-RU')} сум
+                    </Text>
+                  </View>
+
+                  {/* Teams */}
+                  <View className="mt-4 rounded-xl border border-gray-200 p-3">
+                    <Text className="mb-2 font-manrope-semibold text-sm text-text-primary">Названия команд</Text>
+                    {detailsLoading ? (
+                      <Text className="font-manrope-medium text-xs text-gray-500">Загрузка...</Text>
+                    ) : selectedLobbyTeams.length > 0 ? (
+                      selectedLobbyTeams.map((team) => (
+                        <Text key={team.id} className="mb-1 font-manrope-medium text-sm text-text-primary">
+                          • {team.name}
+                        </Text>
+                      ))
+                    ) : (
+                      <Text className="font-manrope-medium text-xs text-gray-500">Команды еще не назначены</Text>
+                    )}
+                  </View>
+
+                  {/* Players list */}
+                  <View className="mt-4 rounded-xl border border-gray-200 p-3">
+                    <Text className="mb-2 font-manrope-semibold text-sm text-text-primary">Игроки лобби</Text>
+                    {selectedLobbyPlayers.length > 0 ? (
+                      selectedLobbyPlayers
+                        .filter((p) => p.status === 'approved')
+                        .map((player) => (
+                          <View key={player.userId} className="mb-2 flex-row items-center justify-between">
+                            <Text className="font-manrope-medium text-sm text-text-primary">
+                              {player.user?.firstName ?? 'Игрок'} {player.user?.lastName ?? ''}
+                            </Text>
+                            {isCreator && player.userId !== user?.id ? (
+                              <TouchableOpacity onPress={() => handleKickPlayer(player.userId)} className="rounded-lg border border-red-300 px-2 py-1">
+                                <Text className="font-manrope-semibold text-xs text-red-500">Удалить</Text>
+                              </TouchableOpacity>
+                            ) : null}
+                          </View>
+                        ))
+                    ) : (
+                      <Text className="font-manrope-medium text-xs text-gray-500">Игроков нет</Text>
+                    )}
+                  </View>
+
+                  {/* Creator management */}
+                  {isCreator ? (
+                    <View className="mt-4">
+                      <Text className="mb-2 font-manrope-semibold text-sm text-text-primary">Управление лобби</Text>
+                      <View className="mb-2 flex-row" style={{ gap: 8 }}>
+                        {([
+                          { key: 'open', label: 'Открытое' },
+                          { key: 'invite_only', label: 'По приглашению' },
+                          { key: 'closed', label: 'Закрытое' },
+                        ] as Array<{ key: LobbyType; label: string }>).map((option) => (
+                          <TouchableOpacity
+                            key={option.key}
+                            onPress={() => void handleChangeType(option.key)}
+                            className={`rounded-lg px-3 py-2 ${selectedLobby.type === option.key ? 'bg-primary' : 'border border-gray-300'}`}
+                          >
+                            <Text className={`text-xs font-manrope-semibold ${selectedLobby.type === option.key ? 'text-white' : 'text-text-primary'}`}>
+                              {option.label}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <TouchableOpacity onPress={() => { setFriendQuery(''); setInviteModal(true); }} className="rounded-xl bg-primary py-3">
+                        <Text className="text-center font-manrope-bold text-sm text-white">Пригласить игрока</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
+            </ScrollView>
           </View>
         </View>
       </Modal>
