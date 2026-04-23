@@ -10,6 +10,11 @@ export interface User {
   isGuest: boolean;
   avatarUrl: string | null;
   expoPushToken: string | null;
+  rating: number;
+  tournamentCount: number;
+  wins: number;
+  streakWeeks: number;
+  position: string | null;
   createdAt: string;
 }
 

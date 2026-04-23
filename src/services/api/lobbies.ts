@@ -16,6 +16,7 @@ export interface CreateLobbyDto {
 
 export const lobbiesApi = {
   listOpen: () => apiRequest<Lobby[]>({ method: 'GET', url: '/lobbies' }),
+  mine: () => apiRequest<Lobby[]>({ method: 'GET', url: '/lobbies/mine' }),
   get: (id: string) =>
     apiRequest<Lobby>({ method: 'GET', url: `/lobbies/${id}` }),
   players: (id: string) =>
