@@ -13,6 +13,23 @@ import { fieldsApi } from '../services/api/fields';
 import { newsApi } from '../services/api/news';
 import type { Field, News } from '../types/api';
 
+// ─── Rating helpers ───────────────────────────────────────────────────────────
+function getRatingLevel(rating: number): number {
+  return Math.min(10, Math.floor(rating / 300) + 1);
+}
+
+function getRatingProgress(rating: number): number {
+  return (rating % 300) / 300;
+}
+
+function getRatingTier(rating: number): string {
+  if (rating < 300) return 'Новичок';
+  if (rating < 900) return 'Любитель';
+  if (rating < 1800) return 'Полупрофи';
+  if (rating < 3000) return 'Профи';
+  return 'Легенда';
+}
+
 // ─── FACEIT-style rating arc badge ───────────────────────────────────────────
 interface RatingBadgeProps {
   level: number;   // 1-10
@@ -128,15 +145,16 @@ import ReadyMatchSvg from '../../assets/images/homepage/readyMatch.svg';
 import Logo from '../../assets/images/logo_white.svg';
 import Bell from '../../assets/images/homepage/bell-white.svg';
 
-const mockClans = [
-  { id: 1, name: 'Paxtakor', wins: 37, losses: 8, score: 1886, rank: 1 },
-  { id: 2, name: 'Paxtakor', wins: 37, losses: 8, score: 1456, rank: 2 },
-  { id: 3, name: 'Paxtakor', wins: 37, losses: 8, score: 1286, rank: 3 },
-];
 
 export const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const userRating = user?.rating ?? 0;
+  const level = getRatingLevel(userRating);
+  const levelMin = Math.floor(userRating / 300) * 300;
+  const levelMax = levelMin + 300;
+  const progressPct = Math.round(getRatingProgress(userRating) * 100);
+  const tier = getRatingTier(userRating);
   const [topField, setTopField] = useState<Field | null>(null);
   const [newsFeed, setNewsFeed] = useState<News[]>([]);
 
@@ -194,18 +212,18 @@ export const HomeScreen: React.FC = () => {
               </View>
               {/* FACEIT-style rating arc — bottom-right */}
               <View className="absolute -bottom-3 -right-3 z-10">
-                <RatingBadge level={10} score={1000} maxScore={2000} />
+                <RatingBadge level={level} score={userRating} maxScore={levelMax} />
               </View>
             </View>
 
             {/* Progress bar */}
             <View className="flex-1 pb-3">
               <View className="h-[6px] w-full bg-[#d0d0d0] rounded-full overflow-hidden mb-1">
-                <View className="h-full bg-primary w-[85%] rounded-full" />
+                <View className="h-full bg-primary rounded-full" style={{ width: `${progressPct}%` }} />
               </View>
               <View className="flex-row justify-between">
-                <Text className="text-[#5B5757] font-manrope-medium text-xs">1000</Text>
-                <Text className="text-[#5B5757] font-manrope-medium text-xs">2000</Text>
+                <Text className="text-[#5B5757] font-manrope-medium text-xs">{levelMin}</Text>
+                <Text className="text-[#5B5757] font-manrope-medium text-xs">{levelMax}</Text>
               </View>
             </View>
           </View>
@@ -216,7 +234,7 @@ export const HomeScreen: React.FC = () => {
           </Text>
           <View className="flex-row items-center mb-6">
             <Text className="text-base mr-1.5">🏆</Text>
-            <Text className="text-[#322D2D] font-manrope-medium text-[15px]">Полупрофи</Text>
+            <Text className="text-[#322D2D] font-manrope-medium text-[15px]">{tier}</Text>
           </View>
 
           {/* Action Buttons */}
@@ -279,25 +297,24 @@ export const HomeScreen: React.FC = () => {
             contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
             className="mb-4"
           >
-            {[
-              { id: 1, name: 'Qobiljonov qobil', avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cristiano_Ronaldo_2018.jpg/220px-Cristiano_Ronaldo_2018.jpg' },
-              { id: 2, name: 'Qobiljonov qobil', avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cristiano_Ronaldo_2018.jpg/220px-Cristiano_Ronaldo_2018.jpg' },
-              { id: 3, name: 'Qobiljonov qobil', avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cristiano_Ronaldo_2018.jpg/220px-Cristiano_Ronaldo_2018.jpg' },
-              { id: 4, name: 'Qobiljonov qobil', avatar: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cristiano_Ronaldo_2018.jpg/220px-Cristiano_Ronaldo_2018.jpg' },
-            ].map((player) => (
+            {newsFeed.slice(0, 6).map((item) => (
               <View
-                key={player.id}
+                key={item.id}
                 className="items-center border border-primary rounded-xl p-3"
                 style={{ width: 140 }}
               >
                 <View className="w-16 h-16 rounded-full overflow-hidden mb-2 bg-[#ececec]">
-                  <Image source={{ uri: player.avatar }} className="w-full h-full" resizeMode="cover" />
+                  {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} className="w-full h-full" resizeMode="cover" />
+                  ) : (
+                    <View className="w-full h-full bg-[#d0d0d0]" />
+                  )}
                 </View>
-                <Text className="font-manrope-semibold text-[13px] text-text-primary text-center mb-2" numberOfLines={1}>
-                  {player.name}
+                <Text className="font-manrope-semibold text-[13px] text-text-primary text-center mb-2" numberOfLines={2}>
+                  {item.title}
                 </Text>
                 <TouchableOpacity className="border border-primary rounded-lg px-4 py-1">
-                  <Text className="text-primary font-manrope-medium text-xs">Подписаться</Text>
+                  <Text className="text-primary font-manrope-medium text-xs">Читать</Text>
                 </TouchableOpacity>
               </View>
             ))}
