@@ -237,6 +237,23 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const selectedField = selectedLobby ? lobbyFields[selectedLobby.fieldId] : null;
   const isCreator = !!(selectedLobby && user?.id === selectedLobby.creatorId);
 
+  const mapPreviewUrl = useMemo(() => {
+    if (!selectedField?.mapUrl) return null;
+    const coords = extractLatLng(selectedField.mapUrl);
+    if (!coords) return null;
+    return `https://static-maps.yandex.ru/1.x/?lang=ru_RU&ll=${coords.lng},${coords.lat}&size=650,300&z=15&l=map&pt=${coords.lng},${coords.lat},pm2rdm`;
+  }, [selectedField?.mapUrl]);
+
+  const openMap = useCallback(async () => {
+    if (!selectedField?.mapUrl) return;
+    const supported = await Linking.canOpenURL(selectedField.mapUrl);
+    if (!supported) {
+      Alert.alert('Ошибка', 'Не удалось открыть ссылку карты');
+      return;
+    }
+    await Linking.openURL(selectedField.mapUrl);
+  }, [selectedField?.mapUrl]);
+
   useEffect(() => {
     if (!inviteModal || !selectedLobby) return;
     let cancelled = false;
