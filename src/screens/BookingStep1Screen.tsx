@@ -308,9 +308,9 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
       price: `${field.pricePerHour.toLocaleString('ru-RU')} СУМ`,
       image: field.photos?.[0] ? { uri: field.photos[0] } : mockStadium.image,
       cover: field.description ?? mockStadium.cover,
-      type: mockStadium.type,
-      size: mockStadium.size,
-      workTime: mockStadium.workTime,
+      type: field.pitchType ?? mockStadium.type,
+      size: field.dimensions ?? mockStadium.size,
+      workTime: field.workTime ?? mockStadium.workTime,
       amenities: {
         parking: amenities.parking ?? false,
         locker: amenities.locker ?? false,
@@ -333,7 +333,8 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
     async (players: number, teams: number, hours: number, gameType: GameType) => {
       if (!fieldId) {
         setModalVisible(false);
-        navigation.navigate('BookingStep2', {});
+        Alert.alert('Выбор стадиона', 'Сначала выберите стадион из списка');
+        navigation.navigate('StadiumList');
         return;
       }
       setSubmitting(true);
@@ -359,6 +360,7 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
   );
 
   void slots;
+  const canCreateLobby = Boolean(fieldId);
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -507,12 +509,14 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
       {/* Sticky button */}
       <View className="absolute bottom-0 left-0 right-0 px-4 pt-2 pb-6 bg-white">
         <TouchableOpacity
-          className={`rounded-xl py-4 items-center ${!showSchedule || selectedTimeSlot ? 'bg-primary' : 'bg-gray-300'}`}
-          onPress={() => (!showSchedule || selectedTimeSlot) && setModalVisible(true)}
-          disabled={showSchedule && !selectedTimeSlot}
+          className={`rounded-xl py-4 items-center ${(!showSchedule || selectedTimeSlot) && canCreateLobby ? 'bg-primary' : 'bg-gray-300'}`}
+          onPress={() => (!showSchedule || selectedTimeSlot) && canCreateLobby && setModalVisible(true)}
+          disabled={(showSchedule && !selectedTimeSlot) || !canCreateLobby}
           activeOpacity={0.7}
         >
-          <Text className="text-white font-manrope-bold text-base">Создать лобби</Text>
+          <Text className="text-white font-manrope-bold text-base">
+            {canCreateLobby ? 'Создать лобби' : 'Сначала выберите стадион'}
+          </Text>
         </TouchableOpacity>
       </View>
 

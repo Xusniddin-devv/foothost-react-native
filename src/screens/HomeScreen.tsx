@@ -7,11 +7,14 @@ import {
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '../contexts/AuthContext';
 import { fieldsApi } from '../services/api/fields';
 import { newsApi } from '../services/api/news';
 import type { Field, News } from '../types/api';
+import { RootStackParamList } from '../types/navigation';
 
 // ─── Rating helpers ───────────────────────────────────────────────────────────
 function getRatingLevel(rating: number): number {
@@ -137,14 +140,12 @@ import {
 } from '../components/common';
 
 // Import SVG files
-import News1Svg from '../../assets/images/homepage/news1.svg';
-import News2Svg from '../../assets/images/homepage/news2.svg';
-import BestFieldSvg from '../../assets/images/homepage/bestfield.svg';
 import Logo from '../../assets/images/logo_white.svg';
 import Bell from '../../assets/images/homepage/bell-white.svg';
 
 
 export const HomeScreen: React.FC = () => {
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const userRating = user?.rating ?? 0;
@@ -240,7 +241,10 @@ export const HomeScreen: React.FC = () => {
             <TouchableOpacity className="flex-1 bg-primary py-3.5 rounded-lg mr-2 items-center justify-center">
               <Text className="text-white font-manrope-bold text-[15px]">Найти матч</Text>
             </TouchableOpacity>
-            <TouchableOpacity className="flex-1 bg-primary py-3.5 rounded-lg ml-2 items-center justify-center">
+            <TouchableOpacity
+              className="flex-1 bg-primary py-3.5 rounded-lg ml-2 items-center justify-center"
+              onPress={() => navigation.navigate('StadiumList')}
+            >
               <Text className="text-white font-manrope-bold text-[15px]">Создать лобби</Text>
             </TouchableOpacity>
           </View>
@@ -253,21 +257,30 @@ export const HomeScreen: React.FC = () => {
             onViewAll={() => console.log('View all fields')}
           />
 
-          <FieldCard
-            name={topField?.name ?? 'BUNYODKOR'}
-            location={topField?.address ?? 'Малая кольцевая дорога'}
-            rating={topField ? Number(topField.rating.toFixed(1)) : 9.9}
-            distance={
-              topField ? `${topField.reviewsCount} отзывов` : '4.9 км от вас'
-            }
-            image={
-              topField?.photos?.[0]
-                ? { uri: topField.photos[0] }
-                : require('../../assets/images/homepage/homepage.png')
-            }
-            onPress={() => console.log('Field pressed')}
-            roundedBottom={true}
-          />
+          {topField ? (
+            <FieldCard
+              name={topField.name}
+              location={topField.address}
+              rating={Number(topField.rating.toFixed(1))}
+              distance={`${topField.reviewsCount} отзывов`}
+              image={
+                topField.photos?.[0]
+                  ? { uri: topField.photos[0] }
+                  : undefined
+              }
+              onPress={() => console.log('Field pressed')}
+              roundedBottom={true}
+            />
+          ) : (
+            <View className="rounded-xl border border-[#e4e4e4] bg-[#fafafa] p-4">
+              <Text className="font-manrope-semibold text-[14px] text-text-primary">
+                Пока нет добавленных стадионов
+              </Text>
+              <Text className="mt-1 font-manrope-medium text-[12px] text-[#777]">
+                Добавьте стадионы в админ-панели, и они появятся здесь.
+              </Text>
+            </View>
+          )}
 
           {/* Pagination Dots */}
           <View className="flex-row justify-center mt-4 space-x-2">
@@ -281,7 +294,6 @@ export const HomeScreen: React.FC = () => {
 
         {/* News Section */}
         <View className="mb-4">
-          {/* Players to follow - horizontal scroll */}
           <View className="px-5 mb-3">
             <SectionHeader
               title="NEWS"
@@ -289,76 +301,47 @@ export const HomeScreen: React.FC = () => {
             />
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
-            className="mb-4"
-          >
-            {newsFeed.slice(0, 6).map((item) => (
-              <View
-                key={item.id}
-                className="items-center border border-primary rounded-xl p-3"
-                style={{ width: 140 }}
-              >
-                <View className="w-16 h-16 rounded-full overflow-hidden mb-2 bg-[#ececec]">
-                  {item.imageUrl ? (
-                    <Image source={{ uri: item.imageUrl }} className="w-full h-full" resizeMode="cover" />
-                  ) : (
-                    <View className="w-full h-full bg-[#d0d0d0]" />
-                  )}
-                </View>
-                <Text className="font-manrope-semibold text-[13px] text-text-primary text-center mb-2" numberOfLines={2}>
-                  {item.title}
-                </Text>
-                <TouchableOpacity className="border border-primary rounded-lg px-4 py-1">
-                  <Text className="text-primary font-manrope-medium text-xs">Читать</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
-
-          {/* News grid - fixed width inside px-5 */}
           <View className="px-5">
-            {/* Row 1 — two equal cards */}
-            <View className="flex-row mb-2" style={{ gap: 8 }}>
-              <TouchableOpacity style={{ flex: 1 }} onPress={() => console.log('News 1')}>
-                <View className="h-40 rounded-xl overflow-hidden">
-                  <News1Svg width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
-                </View>
-                <View className="absolute bottom-2 left-2 right-2">
-                  <Text className="text-white font-manrope-semibold text-xs leading-4" numberOfLines={2}>
-                    Gamemag.ru - Состоялся релиз футбольного...
-                  </Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity style={{ flex: 1 }} onPress={() => console.log('News 2')}>
-                <View className="h-40 rounded-xl overflow-hidden">
-                  <News2Svg width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
-                </View>
-                <View className="absolute bottom-2 left-2 right-2">
-                  <Text className="text-white font-manrope-semibold text-xs leading-4" numberOfLines={2}>
-                    Yamal helps Barcelona seal La Liga title at rivals
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            {/* Row 2 — full-width card */}
-            <TouchableOpacity className="w-full" onPress={() => console.log('Large news')}>
-              <View className="w-full h-56 rounded-xl overflow-hidden">
-                <BestFieldSvg width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
-              </View>
-              <View className="absolute top-4 left-4 right-4">
-                <Text className="text-white text-2xl font-artico-bold mb-1" style={{ lineHeight: 28 }}>
-                  ЛУЧШИЕ ФУТБОЛЬНЫЕ ПОЛЯ В ТАШКЕНТЕ
+            {newsFeed.length === 0 ? (
+              <View className="rounded-xl border border-[#e4e4e4] bg-[#fafafa] p-4">
+                <Text className="font-manrope-semibold text-[14px] text-text-primary">
+                  Пока нет новостей
                 </Text>
-                <Text className="text-white font-manrope-medium text-xs">Debits - 03 June 2023</Text>
+                <Text className="mt-1 font-manrope-medium text-[12px] text-[#777]">
+                  Добавьте новости в админ-панели, и они появятся здесь.
+                </Text>
               </View>
-              <View className="absolute bottom-4 right-4 border border-white rounded-lg px-5 py-2">
-                <Text className="text-white font-manrope-medium text-sm">Читать</Text>
+            ) : (
+              <View className="space-y-3">
+                {newsFeed.slice(0, 5).map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    className="overflow-hidden rounded-xl border border-[#e7e7e7] bg-white"
+                    onPress={() => console.log('News pressed', item.id)}
+                  >
+                    {item.imageUrl ? (
+                      <Image
+                        source={{ uri: item.imageUrl }}
+                        className="h-40 w-full"
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View className="h-28 w-full items-center justify-center bg-[#ececec]">
+                        <Text className="font-manrope-medium text-[12px] text-[#777]">Нет изображения</Text>
+                      </View>
+                    )}
+                    <View className="p-3">
+                      <Text className="font-manrope-semibold text-[15px] text-text-primary" numberOfLines={2}>
+                        {item.title}
+                      </Text>
+                      <Text className="mt-1 font-manrope-medium text-[12px] text-[#777]" numberOfLines={2}>
+                        {item.body}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
               </View>
-            </TouchableOpacity>
+            )}
           </View>
         </View>
         {/* (Clans and Ready-to-Play sections removed) */}

@@ -4,6 +4,7 @@ import type { User } from '../../types/api';
 export interface UpdateUserDto {
   firstName?: string;
   lastName?: string;
+  position?: string | null;
   expoPushToken?: string;
   avatarUrl?: string | null;
 }

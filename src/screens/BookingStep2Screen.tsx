@@ -31,14 +31,7 @@ interface Props {
   route: BookingStep2ScreenRouteProp;
 }
 
-const mockStadium = {
-  name: 'BUNYODKOR',
-  address: 'Малая кольцевая дорога',
-  rating: 9.9,
-  totalPrice: '200.000',
-  collectedPrice: '100.000',
-  image: require('../../assets/images/stadium/stadium.png'),
-};
+const FALLBACK_STADIUM_IMAGE = require('../../assets/images/stadium/stadium.png');
 
 const SLOTS_PER_TEAM = 5;
 
@@ -50,8 +43,8 @@ interface Team {
 
 const initialTeams: Team[] = [
   { id: 1, name: 'Команда 1', players: Array(SLOTS_PER_TEAM).fill(null) },
-  { id: 2, name: 'Команда 1', players: Array(SLOTS_PER_TEAM).fill(null) },
-  { id: 3, name: 'Команда 1', players: Array(SLOTS_PER_TEAM).fill(null) },
+  { id: 2, name: 'Команда 2', players: Array(SLOTS_PER_TEAM).fill(null) },
+  { id: 3, name: 'Команда 3', players: Array(SLOTS_PER_TEAM).fill(null) },
 ];
 
 // ── Progress bar ───────────────────────────────────────────────────────────────
@@ -150,6 +143,7 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
   const [lobby, setLobby] = useState<Lobby | null>(null);
   const [field, setField] = useState<Field | null>(null);
   const [players, setPlayers] = useState<LobbyPlayer[]>([]);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     if (!lobbyId) return;
@@ -218,9 +212,11 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
   const handleShare = async () => {
     if (!lobby) return;
     try {
+      const inviteCode = lobby.inviteCode ?? lobby.id;
       await Share.share({
-        message: `Присоединяйся к лобби Foothost! Код: ${lobby.inviteCode ?? lobby.id}`,
+        message: `Присоединяйся к лобби Foothost!\nПоле: ${field?.name ?? 'Лобби'}\nКод приглашения: ${inviteCode}`,
       });
+      setShareCopied(true);
     } catch {
       // no-op
     }
@@ -247,7 +243,11 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Hero image */}
         <View style={{ position: 'relative' }}>
-          <Image source={mockStadium.image} style={{ width: '100%', height: 200 }} resizeMode="cover" />
+          <Image
+            source={field?.photos?.[0] ? { uri: field.photos[0] } : FALLBACK_STADIUM_IMAGE}
+            style={{ width: '100%', height: 200 }}
+            resizeMode="cover"
+          />
           {/* Gradient overlay at bottom */}
           <View
             style={{
@@ -263,18 +263,18 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
           >
             <View className="flex-row items-center" style={{ gap: 8 }}>
               <Text className="font-artico-bold text-white text-[22px]" style={{ letterSpacing: 1 }}>
-                {field?.name ?? mockStadium.name}
+                {field?.name ?? 'Лобби'}
               </Text>
               <View className="bg-primary rounded-md px-2 py-0.5 flex-row items-center" style={{ gap: 3 }}>
                 <Text className="text-white font-manrope-bold text-sm">
-                  {field ? Number(field.rating.toFixed(1)) : mockStadium.rating}
+                  {field ? Number(field.rating.toFixed(1)) : 0}
                 </Text>
                 <MaterialCommunityIcons name="star" size={12} color="white" />
               </View>
             </View>
             <View className="flex-row items-center mt-0.5">
               <MaterialCommunityIcons name="map-marker" size={12} color="white" />
-              <Text className="text-white font-manrope-medium text-xs ml-1">{field?.address ?? mockStadium.address}</Text>
+              <Text className="text-white font-manrope-medium text-xs ml-1">{field?.address ?? '—'}</Text>
             </View>
           </View>
         </View>
@@ -282,8 +282,8 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
         {/* Price card */}
         <View className="mt-3">
           <PriceCard
-            total={mockStadium.totalPrice}
-            collected={mockStadium.collectedPrice}
+            total={lobby ? lobby.totalAmount.toLocaleString('ru-RU') : '0'}
+            collected={lobby ? lobby.confirmedTotal.toLocaleString('ru-RU') : '0'}
             onPayPress={() =>
               navigation.navigate('PaymentScreen', {
                 lobbyId,
@@ -291,6 +291,15 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
               })
             }
           />
+        </View>
+
+        <View className="mx-4 mb-4 rounded-xl border border-primary/30 bg-white px-4 py-3">
+          <Text className="font-manrope-semibold text-sm text-text-primary">
+            Код приглашения: {lobby?.inviteCode ?? 'будет после создания'}
+          </Text>
+          {shareCopied ? (
+            <Text className="mt-1 font-manrope-medium text-xs text-primary">Приглашение готово к отправке</Text>
+          ) : null}
         </View>
 
         {/* Teams section */}

@@ -52,6 +52,9 @@ export interface Field {
   slotDuration: number;
   amenities: Record<string, boolean>;
   description: string | null;
+  pitchType: string | null;
+  dimensions: string | null;
+  workTime: string | null;
   photos: string[];
   rating: number;
   reviewsCount: number;
