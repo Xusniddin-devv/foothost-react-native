@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,9 +18,17 @@ import { RootStackParamList } from '../types/navigation';
 import { Header, Container, MatchCard, TeamCard, Button } from '../components/common';
 import LogoWhite from '../../assets/images/logo_white.svg';
 import CameraSvg from '../../assets/images/profile/camera.svg';
-import ChelseaSvg from '../../assets/images/profile/chelsea.svg';
-import MyuSvg from '../../assets/images/profile/MYU.svg';
 import { useAuth } from '../contexts/AuthContext';
+import { lobbiesApi } from '../services/api/lobbies';
+import { fieldsApi } from '../services/api/fields';
+
+function getPlayerTier(rating: number): string {
+  if (rating < 300) return 'Новичок';
+  if (rating < 900) return 'Любитель';
+  if (rating < 1800) return 'Полупрофи';
+  if (rating < 3000) return 'Профи';
+  return 'Легенда';
+}
 
 type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Profile'>;
 
@@ -33,91 +41,24 @@ interface Team {
   logo?: any;
 }
 
-const mockUser = {
-  name: 'ШУКУР ГАЙНУТДИНОВ',
-  title: 'Полупрофи',
-  stats: {
-    rating: '2 900',
-    tournaments: '7',
-    wins: '3',
-    matchesPlayed: '58',
-    streakWeeks: '3',
-    mode: 'Активный режим',
-    position: 'Вратарь / Полузащитник',
-  },
-};
-
-const mockUpcomingMatches = [
-  {
-    id: '1',
-    location: 'Малая кольцевая...',
-    dateTime: '24.12.2025 - 18:00',
-    teams: [
-      { name: 'CHELSEA', logo: <ChelseaSvg width={64} height={64} /> },
-      { name: 'MAN UTD', logo: <MyuSvg width={64} height={64} /> },
-    ] as [Team, Team],
-    title: 'Weekend Battle',
-    stadiumName: 'Chilonzor Stadium',
-    cost: 'Стоимость: 200 000 с команды',
-    participants: '12/10',
-    image: undefined,
-    onPress: () => console.log('Match 1 pressed'),
-  },
-  {
-    id: '2',
-    location: 'Малая кольцевая...',
-    dateTime: '24.12.2025 - 18:00',
-    teams: [
-      { name: 'CHELSEA', logo: <ChelseaSvg width={64} height={64} /> },
-      { name: 'MAN UTD', logo: <MyuSvg width={64} height={64} /> },
-    ] as [Team, Team],
-    title: 'Weekend Battle',
-    stadiumName: 'Chilonzor Stadium',
-    cost: 'Стоимость: 200 000 с команды',
-    participants: '12/10',
-    image: require('../../assets/images/stadium/stadium.png'),
-    onPress: () => console.log('Match 2 pressed'),
-  },
-];
-
-const mockPastMatches = [
-  {
-    id: '1',
-    location: 'Малая кольцевая...',
-    dateTime: '20.12.2025 - 18:00',
-    teams: [
-      { name: 'ARSENAL', logo: null },
-      { name: 'LIVERPOOL', logo: null },
-    ] as [Team, Team],
-    title: 'Weekend Battle',
-    stadiumName: 'Chilonzor Stadium',
-    cost: 'Стоимость: 200 000 с команды',
-    participants: '12/12',
-    image: undefined,
-    onPress: () => console.log('Past Match 1 pressed'),
-  },
-];
-
 const mockTeams = [
-  { id: '1', name: 'CHELSEA', logo: <ChelseaSvg width={48} height={48} />, onPress: () => {} },
+  { id: '1', name: 'CHELSEA', logo: null, onPress: () => {} },
   { id: '2', name: 'ARSENAL', logo: null, onPress: () => {} },
-  { id: '3', name: 'MAN UNITED', logo: <MyuSvg width={48} height={48} />, onPress: () => {} },
-];
-
-const mockRecommendedLobbies = [
-  {
-    id: '1',
-    location: 'Малая кольцевая...',
-    dateTime: '24.12.2025 - 18:00',
-    title: 'Weekend Battle: Chilonzor Stadium',
-    subtitle: 'Открытое лобби рядом с вами',
-    participants: '12/10',
-    image: require('../../assets/images/stadium/stadium.png'),
-  },
+  { id: '3', name: 'MAN UNITED', logo: null, onPress: () => {} },
 ];
 
 // ── Player stats card ──────────────────────────────────────────────────────────
-const StatsCard = ({ stats }: { stats: typeof mockUser.stats }) => (
+interface PlayerStats {
+  rating: string;
+  tournaments: string;
+  wins: string;
+  matchesPlayed: string;
+  streakWeeks: string;
+  mode: string;
+  position: string;
+}
+
+const StatsCard = ({ stats }: { stats: PlayerStats }) => (
   <View
     className="rounded-xl border border-primary mx-4 mb-5 overflow-hidden"
   >
@@ -158,56 +99,31 @@ const StatRow = ({
   </Text>
 );
 
-// ── Lobby card ─────────────────────────────────────────────────────────────────
-const LobbyCard = ({
-  item,
-}: {
-  item: (typeof mockRecommendedLobbies)[number];
-}) => (
-  <TouchableOpacity
-    className="rounded-xl overflow-hidden mb-3"
-    style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}
-    activeOpacity={0.85}
-  >
-    {/* Image */}
-    <View style={{ height: 120 }}>
-      <Image source={item.image} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-      {/* Meta row */}
-      <View className="absolute top-0 left-0 right-0 flex-row justify-between px-3 pt-2">
-        <View className="flex-row items-center bg-black/40 rounded-full px-2 py-0.5">
-          <MaterialCommunityIcons name="map-marker" size={10} color="white" />
-          <Text className="text-white font-manrope-medium text-[10px] ml-1">{item.location}</Text>
-        </View>
-        <View className="flex-row items-center bg-black/40 rounded-full px-2 py-0.5">
-          <MaterialCommunityIcons name="calendar" size={10} color="white" />
-          <Text className="text-white font-manrope-medium text-[10px] ml-1">{item.dateTime}</Text>
-        </View>
-      </View>
-    </View>
-    {/* Footer */}
-    <View className="bg-primary flex-row items-center justify-between px-3 py-2.5">
-      <View className="flex-1 mr-2">
-        <Text className="text-white font-manrope-bold text-sm" numberOfLines={1}>{item.title}</Text>
-        <Text className="text-white font-manrope-medium text-xs mt-0.5">{item.subtitle}</Text>
-      </View>
-      <View className="flex-row items-center">
-        <MaterialCommunityIcons name="account-group" size={14} color="white" />
-        <Text className="text-white font-manrope-medium text-xs ml-1">{item.participants}</Text>
-        <MaterialCommunityIcons name="chevron-right" size={18} color="white" style={{ marginLeft: 6 }} />
-      </View>
-    </View>
-  </TouchableOpacity>
-);
-
 // ── Main screen ────────────────────────────────────────────────────────────────
 export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history' | 'teams'>('upcoming');
   const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
   const { user, logout } = useAuth();
+  const [myLobbies, setMyLobbies] = useState<import('../types/api').Lobby[]>([]);
+  const [lobbyFields, setLobbyFields] = useState<Record<string, import('../types/api').Field>>({});
+
+  useEffect(() => {
+    lobbiesApi.mine().then(async (data) => {
+      setMyLobbies(data);
+      const ids = [...new Set(data.map((l) => l.fieldId))];
+      const fetched = await Promise.all(ids.map((id) => fieldsApi.get(id).catch(() => null)));
+      const map: Record<string, import('../types/api').Field> = {};
+      fetched.forEach((f) => { if (f) map[f.id] = f; });
+      setLobbyFields(map);
+    }).catch(() => {});
+  }, []);
+
+  const tier = getPlayerTier(user?.rating ?? 0);
+
   const displayName = user
-    ? `${user.firstName} ${user.lastName}`.trim().toUpperCase() || mockUser.name
-    : mockUser.name;
+    ? `${user.firstName} ${user.lastName}`.trim().toUpperCase()
+    : '—';
 
   const handlePersonalDetails = () => {
     setShowDropdown(false);
@@ -235,16 +151,6 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         },
       },
     ]);
-  };
-
-  const handlePastMatchPress = (match: any) => {
-    navigation.navigate('MatchRating', {
-      matchId: match.id,
-      teams: [match.teams[0].name, match.teams[1].name],
-      eventName: match.title,
-      date: match.dateTime,
-      fieldName: match.stadiumName,
-    });
   };
 
   return (
@@ -321,7 +227,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           </Text>
           <View className="flex-row items-center mt-1">
             <Text className="text-base mr-1">🏆</Text>
-            <Text className="font-manrope-medium text-sm text-text-primary">{mockUser.title}</Text>
+            <Text className="font-manrope-medium text-sm text-text-primary">{tier}</Text>
           </View>
         </View>
 
@@ -329,7 +235,15 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         <Text className="font-artico-bold text-[20px] text-text-primary mx-4 mb-2" style={{ letterSpacing: 0.5 }}>
           СТАТИСТИКА ИГРОКА
         </Text>
-        <StatsCard stats={mockUser.stats} />
+        <StatsCard stats={{
+          rating: String(user?.rating ?? 0),
+          tournaments: String(user?.tournamentCount ?? 0),
+          wins: String(user?.wins ?? 0),
+          matchesPlayed: String(myLobbies.length),
+          streakWeeks: String(user?.streakWeeks ?? 0),
+          mode: 'Активный режим',
+          position: user?.position ?? '—',
+        }} />
 
         {/* Tabs */}
         <View className="flex-row border-b border-gray-200 mx-4 mb-4">
@@ -367,75 +281,76 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         <View className="px-4">
           {activeTab === 'upcoming' ? (
             <>
-              {mockUpcomingMatches.map((match) => (
-                <View key={match.id} className="mb-4 rounded-xl overflow-hidden" style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}>
-                  <MatchCard
-                    id={match.id}
-                    location={match.location}
-                    dateTime={match.dateTime}
-                    teams={match.teams}
-                    title={match.title}
-                    stadiumName={match.stadiumName}
-                    cost={match.cost}
-                    participants={match.participants}
-                    image={match.image}
-                    onPress={match.onPress}
-                  />
-                  <TouchableOpacity
-                    className="bg-primary py-3 px-4"
-                    onPress={() => console.log('View match', match.id)}
-                  >
-                    <View className="flex-row justify-between items-center">
-                      <View className="flex-1">
-                        <Text className="text-white font-manrope-bold text-sm mb-1">{match.title}: {match.stadiumName}</Text>
-                        <Text className="text-white font-manrope-medium text-xs">{match.cost}</Text>
+              {myLobbies
+                .filter((l) => ['active', 'full', 'paid', 'booked'].includes(l.status))
+                .map((lobby) => {
+                  const field = lobbyFields[lobby.fieldId];
+                  return (
+                    <View key={lobby.id} className="mb-4 rounded-xl overflow-hidden bg-gray-100 px-4 py-3">
+                      <View className="flex-row items-center mb-1">
+                        <MaterialCommunityIcons name="map-marker" size={14} color="#45AF31" />
+                        <Text className="text-xs text-text-primary ml-1 font-manrope-medium" numberOfLines={1}>
+                          {field?.address ?? '—'}
+                        </Text>
                       </View>
-                      <View className="flex-row items-center">
-                        <MaterialCommunityIcons name="account-group" size={16} color="white" />
-                        <Text className="text-white font-manrope-medium text-xs ml-1">{match.participants}</Text>
-                        <MaterialCommunityIcons name="chevron-right" size={20} color="white" style={{ marginLeft: 6 }} />
+                      <Text className="font-manrope-bold text-sm text-text-primary mb-1">
+                        {field?.name ?? 'Лобби'}
+                      </Text>
+                      <Text className="text-xs text-[#5B5757]">
+                        До: {lobby.expiresAt ? new Date(lobby.expiresAt).toLocaleDateString('ru-RU') : '—'}
+                      </Text>
+                      <View className="flex-row items-center mt-2">
+                        <MaterialCommunityIcons name="account-group" size={14} color="#45AF31" />
+                        <Text className="text-xs font-manrope-bold ml-1 text-text-primary">
+                          {lobby.maxPlayers} игроков
+                        </Text>
+                        <Text className="text-xs text-[#5B5757] ml-3">
+                          {lobby.totalAmount.toLocaleString('ru-RU')} сум
+                        </Text>
                       </View>
                     </View>
-                  </TouchableOpacity>
-                </View>
-              ))}
+                  );
+                })}
+              {myLobbies.filter((l) => ['active', 'full', 'paid', 'booked'].includes(l.status)).length === 0 && (
+                <Text className="text-center text-[#5B5757] font-manrope-medium mt-4">
+                  Нет предстоящих матчей
+                </Text>
+              )}
             </>
           ) : activeTab === 'history' ? (
             <>
-              {mockPastMatches.map((match) => (
-                <View key={match.id} className="mb-4 rounded-xl overflow-hidden" style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}>
-                  <MatchCard
-                    id={match.id}
-                    location={match.location}
-                    dateTime={match.dateTime}
-                    teams={match.teams}
-                    title={match.title}
-                    stadiumName={match.stadiumName}
-                    cost={match.cost}
-                    participants={match.participants}
-                    image={match.image}
-                    isPastMatch={true}
-                    onPress={() => handlePastMatchPress(match)}
-                  />
-                  <TouchableOpacity
-                    className="py-3 px-4"
-                    style={{ backgroundColor: '#1E1E1E' }}
-                    onPress={() => handlePastMatchPress(match)}
-                  >
-                    <View className="flex-row justify-between items-center">
-                      <View className="flex-1">
-                        <Text className="text-white font-manrope-bold text-sm mb-1">{match.title}: {match.stadiumName}</Text>
-                        <Text className="text-white font-manrope-medium text-xs">{match.cost}</Text>
+              {myLobbies
+                .filter((l) => l.status === 'completed' || l.status === 'cancelled')
+                .map((lobby) => {
+                  const field = lobbyFields[lobby.fieldId];
+                  return (
+                    <View key={lobby.id} className="mb-4 rounded-xl overflow-hidden bg-gray-100 px-4 py-3">
+                      <View className="flex-row items-center mb-1">
+                        <MaterialCommunityIcons name="map-marker" size={14} color="#45AF31" />
+                        <Text className="text-xs text-text-primary ml-1 font-manrope-medium" numberOfLines={1}>
+                          {field?.address ?? '—'}
+                        </Text>
                       </View>
-                      <View className="flex-row items-center">
-                        <MaterialCommunityIcons name="account-group" size={16} color="white" />
-                        <Text className="text-white font-manrope-medium text-xs ml-1">{match.participants}</Text>
-                        <MaterialCommunityIcons name="chevron-right" size={20} color="white" style={{ marginLeft: 6 }} />
+                      <Text className="font-manrope-bold text-sm text-text-primary mb-1">
+                        {field?.name ?? 'Лобби'}
+                      </Text>
+                      <Text className="text-xs text-[#5B5757]">
+                        Статус: {lobby.status === 'completed' ? 'Завершён' : 'Отменён'}
+                      </Text>
+                      <View className="flex-row items-center mt-2">
+                        <MaterialCommunityIcons name="account-group" size={14} color="#45AF31" />
+                        <Text className="text-xs font-manrope-bold ml-1 text-text-primary">
+                          {lobby.maxPlayers} игроков
+                        </Text>
                       </View>
                     </View>
-                  </TouchableOpacity>
-                </View>
-              ))}
+                  );
+                })}
+              {myLobbies.filter((l) => ['completed', 'cancelled'].includes(l.status)).length === 0 && (
+                <Text className="text-center text-[#5B5757] font-manrope-medium mt-4">
+                  Нет истории матчей
+                </Text>
+              )}
             </>
           ) : (
             <View>
@@ -445,18 +360,6 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           )}
         </View>
-
-        {/* Recommended lobbies */}
-        {(activeTab === 'upcoming' || activeTab === 'history') && (
-          <View className="px-4 mt-2">
-            <Text className="font-artico-bold text-[20px] text-text-primary mb-3" style={{ letterSpacing: 0.5 }}>
-              РЕКОМЕНДУЕМЫЕ ЛОББИ
-            </Text>
-            {mockRecommendedLobbies.map((lobby) => (
-              <LobbyCard key={lobby.id} item={lobby} />
-            ))}
-          </View>
-        )}
         </View>
       </ScrollView>
 
