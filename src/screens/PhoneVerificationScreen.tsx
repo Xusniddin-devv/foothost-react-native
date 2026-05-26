@@ -7,6 +7,9 @@ import {
   Alert,
   TextInput,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -104,6 +107,10 @@ export const PhoneVerificationScreen: React.FC<Props> = ({ navigation, route }) 
 
   return (
     <SafeAreaView className="flex-1 bg-background-default">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
       <View className="bg-primary">
         <View className="pt-8">
           <Header
@@ -125,7 +132,12 @@ export const PhoneVerificationScreen: React.FC<Props> = ({ navigation, route }) 
         </View>
       </View>
 
-      <View className="flex-1 px-6 pt-8">
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 32 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View className="flex-row justify-center mb-8" style={{ gap: 8 }}>
           {digits.map((digit, index) => (
             <TextInput
@@ -141,8 +153,8 @@ export const PhoneVerificationScreen: React.FC<Props> = ({ navigation, route }) 
               textAlign="center"
               className="w-12 h-14 border-2 rounded-lg border-gray-300 text-2xl font-bold text-text-primary"
               style={{
-                borderColor: digit ? '#1F7A1F' : '#D1D5DB',
-                backgroundColor: digit ? 'rgba(31, 122, 31, 0.08)' : 'white',
+                borderColor: digit ? '#45AF31' : '#D1D5DB',
+                backgroundColor: digit ? 'rgba(69, 175, 49, 0.08)' : 'white',
               }}
             />
           ))}
@@ -158,6 +170,7 @@ export const PhoneVerificationScreen: React.FC<Props> = ({ navigation, route }) 
           className={`w-full py-3 rounded-lg ${resendTime === 0 ? 'bg-primary' : 'bg-gray-300'}`}
           onPress={handleResend}
           disabled={resendTime > 0}
+          activeOpacity={0.7}
         >
           <Text
             className={`text-center text-[20px] font-artico-medium ${
@@ -167,7 +180,8 @@ export const PhoneVerificationScreen: React.FC<Props> = ({ navigation, route }) 
             {resendTime === 0 ? 'ОТПРАВИТЬ ЕЩЁ РАЗ' : `ПОВТОР ЧЕРЕЗ ${formatTime(resendTime)}`}
           </Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

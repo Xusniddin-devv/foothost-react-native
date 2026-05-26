@@ -10,6 +10,8 @@ import {
   Image,
   TextInput,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -190,49 +192,62 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      {showDropdown && (
+      {/* Dropdown menu - real Modal so Android back-button & screen-reader work */}
+      <Modal
+        visible={showDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDropdown(false)}
+      >
         <TouchableOpacity
-          className="absolute inset-0 z-40"
-          onPress={() => setShowDropdown(false)}
           activeOpacity={1}
-        />
-      )}
+          onPress={() => setShowDropdown(false)}
+          style={{ flex: 1 }}
+        >
+          <View className="flex-1 pt-20 pr-4 items-end">
+            <View className="bg-white rounded-lg shadow-lg border border-gray-200 w-48 overflow-hidden">
+              <TouchableOpacity
+                className="flex-row items-center px-4 py-3 border-b border-gray-100"
+                onPress={handlePersonalDetails}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="account" size={20} color="#666" />
+                <Text className="ml-3 text-text-primary font-manrope-medium">Личные данные</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-row items-center px-4 py-3 border-b border-gray-100"
+                onPress={handleAboutUs}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="information-outline" size={20} color="#666" />
+                <Text className="ml-3 text-text-primary font-manrope-medium">О НАС</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-row items-center px-4 py-3"
+                onPress={handleLogOut}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="logout" size={20} color="#ef4444" />
+                <Text className="ml-3 text-red-500 font-manrope-medium">Выйти</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Green header */}
       <View className="bg-primary" style={{ height: 160, position: 'relative' }}>
         <Header
           left={<LogoWhite width={100} height={40} style={{ marginTop: 16 }} />}
           right={
-            <View className="relative">
-              <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)}>
-                <MaterialCommunityIcons name="square-edit-outline" size={26} color="#fff" style={{ marginTop: 16 }} />
-              </TouchableOpacity>
-              {showDropdown && (
-                <View className="absolute top-10 -right-5 bg-white rounded-lg shadow-lg border border-gray-200 z-50 w-44">
-                  <TouchableOpacity
-                    className="flex-row items-center px-4 py-3 border-b border-gray-100"
-                    onPress={handlePersonalDetails}
-                  >
-                    <MaterialCommunityIcons name="account" size={20} color="#666" />
-                    <Text className="ml-3 text-text-primary font-manrope-medium">Личные данные</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    className="flex-row items-center px-4 py-3 border-b border-gray-100"
-                    onPress={handleAboutUs}
-                  >
-                    <MaterialCommunityIcons name="information-outline" size={20} color="#666" />
-                    <Text className="ml-3 text-text-primary font-manrope-medium">О НАС</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    className="flex-row items-center px-4 py-3"
-                    onPress={handleLogOut}
-                  >
-                    <MaterialCommunityIcons name="logout" size={20} color="#ef4444" />
-                    <Text className="ml-3 text-red-500 font-manrope-medium">Выйти</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
+            <TouchableOpacity
+              onPress={() => setShowDropdown(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Меню профиля"
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialCommunityIcons name="square-edit-outline" size={26} color="#fff" style={{ marginTop: 16 }} />
+            </TouchableOpacity>
           }
           style={{ backgroundColor: 'transparent' }}
         />
@@ -248,6 +263,8 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
               <TouchableOpacity
                 className="absolute inset-0 items-center justify-center w-full h-full bg-black/15"
                 onPress={handlePersonalDetails}
+                accessibilityRole="button"
+                accessibilityLabel="Изменить фото профиля"
               >
                 <CameraSvg width={38} height={38} />
               </TouchableOpacity>
@@ -425,6 +442,10 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
       </ScrollView>
 
       <Modal visible={enterLobbyVisible} transparent animationType="slide" onRequestClose={() => setEnterLobbyVisible(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
         <View className="flex-1 justify-end bg-black/35">
           <View className="rounded-t-3xl bg-white px-4 pb-8 pt-4">
             <Text className="mb-2 font-manrope-bold text-base text-text-primary">Войти в лобби</Text>
@@ -460,11 +481,13 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
                 setEnterLobbyVisible(false);
               }}
               className="mt-3 rounded-xl border border-gray-200 py-3"
+              activeOpacity={0.7}
             >
               <Text className="text-center font-manrope-semibold text-sm text-text-primary">Отмена</Text>
             </TouchableOpacity>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

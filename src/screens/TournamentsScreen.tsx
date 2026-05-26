@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -13,6 +14,7 @@ import { RootStackParamList } from '../types/navigation';
 import { Container, Header } from '../components/common';
 import { lobbiesApi } from '../services/api/lobbies';
 import { fieldsApi } from '../services/api/fields';
+import { getApiErrorMessage } from '../services/api/client';
 import type { Lobby, Field } from '../types/api';
 
 type TournamentsScreenNavigationProp = StackNavigationProp<
@@ -34,10 +36,11 @@ export const TournamentsScreen: React.FC<Props> = ({ navigation }) => {
   const [lobbies, setLobbies] = useState<Lobby[]>([]);
   const [fields, setFields] = useState<Record<string, Field>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
-      setLoading(true);
       const data = await lobbiesApi.listOpen();
       setLobbies(data);
       const fieldIds = [...new Set(data.map((l) => l.fieldId))];
@@ -45,40 +48,66 @@ export const TournamentsScreen: React.FC<Props> = ({ navigation }) => {
       const map: Record<string, Field> = {};
       fetched.forEach((f) => { if (f) map[f.id] = f; });
       setFields(map);
-    } catch {
-      // silent
+      setError(null);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Не удалось загрузить лобби'));
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadData();
+  }, [loadData]);
 
   return (
     <SafeAreaView className="flex-1 bg-transparent">
       <View className="bg-white">
         <Header
           left={
-            <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              className="p-2"
+              accessibilityRole="button"
+              accessibilityLabel="Назад"
+            >
               <MaterialCommunityIcons name="arrow-left" size={28} color="#212121" />
             </TouchableOpacity>
           }
           title="ТУРНИРЫ"
-          right={
-            <TouchableOpacity>
-              <MaterialCommunityIcons name="dots-vertical" size={28} color="#212121" />
-            </TouchableOpacity>
-          }
         />
       </View>
 
-      <ScrollView className="flex-1 bg-transparent" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1 bg-transparent"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#45AF31" />
+        }
+      >
         <Container padding="sm">
           {loading ? (
             <ActivityIndicator size="large" color="#45AF31" className="mt-8" />
+          ) : error ? (
+            <View className="mt-8 items-center">
+              <Text className="text-center text-red-500 font-manrope-medium mb-3">
+                {error}
+              </Text>
+              <TouchableOpacity
+                className="rounded-xl bg-primary px-4 py-2"
+                onPress={loadData}
+                activeOpacity={0.7}
+              >
+                <Text className="font-manrope-bold text-sm text-white">Повторить</Text>
+              </TouchableOpacity>
+            </View>
           ) : lobbies.length === 0 ? (
             <Text className="text-center text-[#5B5757] font-manrope-medium mt-8">
-              Нет открытых лобби
+              Нет открытых лобби. Потяните вниз, чтобы обновить.
             </Text>
           ) : (
             lobbies.map((lobby) => {
@@ -88,6 +117,13 @@ export const TournamentsScreen: React.FC<Props> = ({ navigation }) => {
                   key={lobby.id}
                   className="bg-gray-100 rounded-xl px-4 py-3 mb-4 shadow-sm active:bg-gray-200"
                   activeOpacity={0.7}
+                  onPress={() =>
+                    navigation.navigate('BookingStep2', {
+                      lobbyId: lobby.id,
+                      fieldId: lobby.fieldId,
+                      fromProfile: true,
+                    })
+                  }
                 >
                   <Text className="text-lg font-manrope-bold text-text-primary mb-1">
                     {field?.name ?? 'Лобби'}

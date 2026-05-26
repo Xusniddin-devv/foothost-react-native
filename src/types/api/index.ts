@@ -133,7 +133,10 @@ export interface Booking {
   id: string;
   lobbyId: string;
   fieldSlotId: string;
-  createdAt: string;
+  status?: 'confirmed' | 'cancelled';
+  confirmedAt?: string;
+  createdAt?: string;
+  fieldSlot?: Pick<FieldSlot, 'id' | 'startTime' | 'endTime' | 'status'>;
 }
 
 export interface Review {

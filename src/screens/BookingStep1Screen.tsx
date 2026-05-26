@@ -173,7 +173,12 @@ const BookingModal: React.FC<BookingModalProps> = ({ visible, onClose, onSubmit,
               <Text className="font-artico-bold text-[24px] text-text-primary" style={{ letterSpacing: 1 }}>
                 БРОНИРОВАНИЕ
               </Text>
-              <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="Закрыть"
+              >
                 <MaterialCommunityIcons name="close" size={26} color="#758A80" />
               </TouchableOpacity>
             </View>
@@ -515,13 +520,13 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
     <SafeAreaView className="flex-1 bg-white">
       <Header
         left={
-          <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            className="p-2"
+            accessibilityRole="button"
+            accessibilityLabel="Назад"
+          >
             <MaterialCommunityIcons name="arrow-left" size={28} color="#212121" />
-          </TouchableOpacity>
-        }
-        right={
-          <TouchableOpacity>
-            <MaterialCommunityIcons name="dots-vertical" size={28} color="#212121" />
           </TouchableOpacity>
         }
       />
@@ -530,11 +535,6 @@ export const BookingStep1Screen: React.FC<Props> = ({ navigation, route }) => {
         {/* Image */}
         <View className="relative">
           <Image source={displayStadium.image} className="w-full h-56" resizeMode="cover" />
-          <View className="absolute bottom-4 left-0 right-0 flex-row justify-center space-x-2">
-            {[1, 2, 3, 4, 5].map((dot) => (
-              <View key={dot} className={`w-2 h-2 rounded-full ${dot === 1 ? 'bg-white' : 'bg-white/50'}`} />
-            ))}
-          </View>
         </View>
 
         <Container padding="sm">

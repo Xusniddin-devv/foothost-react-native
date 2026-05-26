@@ -11,6 +11,8 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -131,23 +133,18 @@ const PlayerSlot = ({
 const TeamCard = ({
   team,
   onAddPlayer,
-  onShuffle,
   paymentMap,
 }: {
   team: DisplayTeam;
   onAddPlayer: (teamId: string, slotIndex: number) => void;
-  onShuffle: (teamId: string) => void;
   paymentMap: Record<string, PaymentStatus>;
 }) => (
   <View
     className="bg-white rounded-2xl px-4 py-3 mb-3"
     style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 1 } }}
   >
-    <View className="flex-row items-center justify-between mb-3">
+    <View className="mb-3">
       <Text className="font-manrope-semibold text-sm text-text-primary">{team.name}</Text>
-      <TouchableOpacity onPress={() => onShuffle(team.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <MaterialCommunityIcons name="shuffle-variant" size={22} color="#45AF31" />
-      </TouchableOpacity>
     </View>
     <View className="flex-row justify-between">
       {team.players.map((player, idx) => (
@@ -308,10 +305,6 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
     setInviteModal({ visible: true, teamId });
   };
 
-  const handleShuffle = (teamId: string) => {
-    void teamId;
-  };
-
   const handleInviteFriend = async (friendId: string) => {
     if (!lobbyId || !inviteModal.teamId) return;
     try {
@@ -380,12 +373,14 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
     <SafeAreaView className="flex-1 bg-[#F5F5F5]">
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-white">
-        <TouchableOpacity onPress={() => navigation.goBack()} className="flex-row items-center">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          className="flex-row items-center"
+          accessibilityRole="button"
+          accessibilityLabel="Назад"
+        >
           <MaterialCommunityIcons name="chevron-left" size={24} color="#212121" />
-          <Text className="font-manrope-medium text-sm text-text-primary ml-1">Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity>
-          <MaterialCommunityIcons name="dots-vertical" size={24} color="#212121" />
+          <Text className="font-manrope-medium text-sm text-text-primary ml-1">Назад</Text>
         </TouchableOpacity>
       </View>
 
@@ -496,7 +491,6 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
               key={team.id}
               team={team}
               onAddPlayer={handleAddPlayer}
-              onShuffle={handleShuffle}
               paymentMap={paymentMap}
             />
           ))}
@@ -537,6 +531,10 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
       )}
 
       <Modal visible={inviteModal.visible} transparent animationType="slide" onRequestClose={() => setInviteModal({ visible: false, teamId: null })}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
         <View className="flex-1 justify-end bg-black/35">
           <View className="rounded-t-3xl bg-white px-4 pb-8 pt-4" style={{ maxHeight: '72%' }}>
             <Text className="mb-2 font-manrope-bold text-base text-text-primary">Пригласить из друзей</Text>
@@ -578,11 +576,13 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
             <TouchableOpacity
               onPress={() => setInviteModal({ visible: false, teamId: null })}
               className="mt-4 rounded-xl border border-gray-200 py-3"
+              activeOpacity={0.7}
             >
               <Text className="text-center font-manrope-semibold text-sm text-text-primary">Закрыть</Text>
             </TouchableOpacity>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={qrVisible} transparent animationType="fade" onRequestClose={() => setQrVisible(false)}>

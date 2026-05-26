@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
-import { SuccessModal } from '../components/common';
+import { Header, SuccessModal } from '../components/common';
 import ChelseaSvg from '../../assets/images/profile/chelsea.svg';
 import MyuSvg from '../../assets/images/profile/MYU.svg';
 type MatchRatingScreenNavigationProp = StackNavigationProp<
@@ -54,7 +54,7 @@ const StarRating: React.FC<{
               <MaterialCommunityIcons
                 name={star <= rating ? "star" : "star-outline"}
                 size={48}
-                color={star <= rating ? "#45AF31" : "#45AF31"}
+                color={star <= rating ? "#45AF31" : "#D1D5DB"}
               />
             </TouchableOpacity>
           ))}
@@ -86,16 +86,19 @@ export const MatchRatingScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-200">
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#212121" />
-        </TouchableOpacity>
-        <Text className="text-lg font-bold text-text-primary">ОЦЕНКА МАТЧА</Text>
-        <TouchableOpacity>
-          <MaterialCommunityIcons name="dots-vertical" size={24} color="#212121" />
-        </TouchableOpacity>
-      </View>
+      <Header
+        left={
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            className="p-2"
+            accessibilityRole="button"
+            accessibilityLabel="Назад"
+          >
+            <MaterialCommunityIcons name="arrow-left" size={28} color="#212121" />
+          </TouchableOpacity>
+        }
+        title="ОЦЕНКА МАТЧА"
+      />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Match Banner */}
@@ -156,8 +159,9 @@ export const MatchRatingScreen: React.FC<Props> = ({ navigation, route }) => {
         <TouchableOpacity
           className="bg-primary rounded-lg py-4"
           onPress={handleSubmit}
+          activeOpacity={0.7}
         >
-          <Text className="text-white text-center text-lg font-bold">Отправить</Text>
+          <Text className="text-white text-center text-lg font-manrope-bold">Отправить</Text>
         </TouchableOpacity>
       </View>
 

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Container } from '../components/common';
+import { Container, Header } from '../components/common';
 import { SuccessModal } from '../components/common/SuccessModal';
 // SVGs are assumed to be set up correctly
 import TypeOfPitchSvg from '../../assets/images/booking/typeofPitch.svg';
@@ -29,29 +29,6 @@ interface Props {
   route: TournamentDetailsScreenRouteProp;
 }
 
-const { width } = Dimensions.get('window');
-
-// Mock tournament data
-const mockTournament = {
-  id: 1,
-  title: 'WEEKEND BATTLE',
-  format: '7х7 - Групповой этап + плей-офф',
-  cost: 'Стоимость: 200 000 с команды',
-  location: 'Chilonzor Arena',
-  participants: '10/12',
-  time: '17:00',
-  date: '25.12.25',
-  price: '200.000 СУМ',
-  distance: '4.9 км от вас',
-  surface: 'Искусственное покрытие',
-  pitchType: 'Открытая',
-  dimensions: '20x40',
-  workTime: '08:00 - 03:00',
-  address: 'Малая кольцевая дорога',
-  team1: 'CHELSEA FOOTBALL CLUB',
-  team2: 'MANCHESTER UNITED',
-};
-
 // Helper component for info cards
 const InfoCard = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) => (
   <View className="bg-gray-100 rounded-lg p-3 flex-1 flex-row items-center h-full">
@@ -66,20 +43,34 @@ const InfoCard = ({ icon, label, value }: { icon: React.ReactNode, label: string
 export const TournamentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Use route params if available, otherwise use mock data
-  const tournament = route?.params?.tournament || mockTournament;
+
+  const tournament = route?.params?.tournament;
+
+  if (!tournament) {
+    return (
+      <SafeAreaView className="flex-1 bg-white items-center justify-center px-6">
+        <Text className="font-manrope-medium text-base text-text-primary text-center mb-4">
+          Не удалось загрузить турнир.
+        </Text>
+        <TouchableOpacity
+          className="bg-primary rounded-xl px-6 py-3"
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Text className="text-white font-manrope-bold text-sm">Назад</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   const handleJoinTournament = () => {
     if (isSubmitting) return;
-    
     setIsSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setShowSuccessModal(true);
-      setIsSubmitting(false);
-    }, 1000);
+    Alert.alert(
+      'Скоро',
+      'Запись на турниры будет доступна в одном из ближайших обновлений.',
+      [{ text: 'OK', onPress: () => setIsSubmitting(false) }],
+    );
   };
 
   const handleCloseModal = () => {
@@ -90,17 +81,19 @@ export const TournamentDetailsScreen: React.FC<Props> = ({ navigation, route }) 
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        {/* Header */}
-        <View className="flex-row items-center justify-between px-4 pt-4 pb-2">
-          <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
+      <Header
+        left={
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            className="p-2"
+            accessibilityRole="button"
+            accessibilityLabel="Назад"
+          >
             <MaterialCommunityIcons name="arrow-left" size={28} color="#212121" />
           </TouchableOpacity>
-          <View className="flex-1" />
-          <TouchableOpacity className="p-2">
-            <MaterialCommunityIcons name="dots-vertical" size={28} color="#212121" />
-          </TouchableOpacity>
-        </View>
+        }
+      />
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
 
         {/* Tournament Banner */}
         <View className="relative mx-4 mb-4">
@@ -230,7 +223,7 @@ export const TournamentDetailsScreen: React.FC<Props> = ({ navigation, route }) 
           disabled={isSubmitting}
           activeOpacity={0.7}
         >
-          <Text className="text-white font-manrope-bold text-md">
+          <Text className="text-white font-manrope-bold text-base">
             {isSubmitting ? 'Присоединение...' : 'Присоединиться к турниру'}
           </Text>
         </TouchableOpacity>

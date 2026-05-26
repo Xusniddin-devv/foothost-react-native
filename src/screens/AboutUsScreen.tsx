@@ -4,6 +4,7 @@ import {
   Text,
   SafeAreaView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -19,26 +20,15 @@ interface Props {
   navigation: AboutUsScreenNavigationProp;
 }
 
-const aboutLinks = [
-  { id: 1, title: 'Contract offer', icon: 'file-document-outline' },
-  { id: 2, title: 'Privacy policy', icon: 'shield-check-outline' },
-  { id: 3, title: 'Connect with us', icon: 'message-outline' },
+const aboutLinks: Array<{ id: number; title: string }> = [
+  { id: 1, title: 'Договор оферты' },
+  { id: 2, title: 'Политика конфиденциальности' },
+  { id: 3, title: 'Связаться с нами' },
 ];
 
 export const AboutUsScreen: React.FC<Props> = ({ navigation }) => {
-  const handleLinkPress = (linkId: number) => {
-    // Handle different link actions
-    switch (linkId) {
-      case 1:
-        // Open contract offer
-        break;
-      case 2:
-        // Open privacy policy
-        break;
-      case 3:
-        // Open contact form
-        break;
-    }
+  const handleLinkPress = (title: string) => {
+    Alert.alert(title, 'Раздел будет доступен в ближайшее время.');
   };
 
   return (
@@ -46,7 +36,12 @@ export const AboutUsScreen: React.FC<Props> = ({ navigation }) => {
       {/* Header */}
       <Header
         left={
-          <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            className="p-2"
+            accessibilityRole="button"
+            accessibilityLabel="Назад"
+          >
             <MaterialCommunityIcons name="arrow-left" size={28} color="#212121" />
           </TouchableOpacity>
         }
@@ -56,42 +51,34 @@ export const AboutUsScreen: React.FC<Props> = ({ navigation }) => {
       <View className="flex-1 px-6 pt-6">
         {/* Grouped Fields Block */}
         <View className="bg-white rounded-lg border border-gray-200 mb-4">
-          <TouchableOpacity 
-            className="flex-row items-center justify-between p-4 border-b border-gray-100"
-            onPress={() => handleLinkPress(1)}
-          >
-            <Text className="text-base text-text-primary">Contract offer</Text>
-            <MaterialCommunityIcons name="chevron-right" size={20} color="#757575" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            className="flex-row items-center justify-between p-4 border-b border-gray-100"
-            onPress={() => handleLinkPress(2)}
-          >
-            <Text className="text-base text-text-primary">Privacy policy</Text>
-            <MaterialCommunityIcons name="chevron-right" size={20} color="#757575" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            className="flex-row items-center justify-between p-4"
-            onPress={() => handleLinkPress(3)}
-          >
-            <Text className="text-base text-text-primary">Connect with us</Text>
-            <MaterialCommunityIcons name="chevron-right" size={20} color="#757575" />
-          </TouchableOpacity>
+          {aboutLinks.map((link, idx) => (
+            <TouchableOpacity
+              key={link.id}
+              className={`flex-row items-center justify-between p-4 ${
+                idx < aboutLinks.length - 1 ? 'border-b border-gray-100' : ''
+              }`}
+              onPress={() => handleLinkPress(link.title)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={link.title}
+            >
+              <Text className="text-base text-text-primary font-manrope-medium">{link.title}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={20} color="#757575" />
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Copyright Text - at the bottom */}
         <View className="flex-1 justify-end pb-6">
           <View className="bg-white rounded-lg p-6 border border-gray-200">
-            <Text className="text-lg font-bold text-text-primary mb-4">FOOT HOST</Text>
-            <Text className="text-sm text-text-secondary mb-2">
+            <Text className="text-lg font-artico-bold text-text-primary mb-4">FOOT HOST</Text>
+            <Text className="text-sm text-text-secondary mb-2 font-manrope-medium">
               Версия приложения: 1.0.0
             </Text>
-            <Text className="text-sm text-text-secondary mb-2">
+            <Text className="text-sm text-text-secondary mb-2 font-manrope-medium">
               © 2024 Foot Host. Все права защищены.
             </Text>
-            <Text className="text-sm text-text-secondary">
+            <Text className="text-sm text-text-secondary font-manrope-medium">
               Приложение для поиска и бронирования футбольных полей в Ташкенте.
             </Text>
           </View>
@@ -99,4 +86,4 @@ export const AboutUsScreen: React.FC<Props> = ({ navigation }) => {
       </View>
     </SafeAreaView>
   );
-}; 
+};

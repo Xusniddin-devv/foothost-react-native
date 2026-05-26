@@ -1,121 +1,184 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
+import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../types/navigation';
-import { Input, SuccessModal } from '../components/common';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { RootStackParamList } from '../types/navigation';
+import { SuccessModal } from '../components/common';
+import { lobbiesApi } from '../services/api/lobbies';
+import { fieldsApi } from '../services/api/fields';
+import type { Field, Lobby } from '../types/api';
 
 type BookingStep3ScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
   'BookingStep3'
 >;
 
+type BookingStep3ScreenRouteProp = RouteProp<RootStackParamList, 'BookingStep3'>;
+
 interface Props {
   navigation: BookingStep3ScreenNavigationProp;
+  route: BookingStep3ScreenRouteProp;
 }
 
-const mockBookingDetails = {
-  date: '11.06.2025 23:30-0:00',
-  price: '200.000 Sum',
-};
+function formatExpiry(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
-export const BookingStep3Screen: React.FC<Props> = ({ navigation }) => {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+export const BookingStep3Screen: React.FC<Props> = ({ navigation, route }) => {
+  const lobbyId = route?.params?.lobbyId;
+  const [lobby, setLobby] = useState<Lobby | null>(null);
+  const [field, setField] = useState<Field | null>(null);
+  const [loading, setLoading] = useState<boolean>(!!lobbyId);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  useEffect(() => {
+    if (!lobbyId) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const l = await lobbiesApi.get(lobbyId);
+        if (cancelled) return;
+        setLobby(l);
+        if (l.fieldId) {
+          const f = await fieldsApi.get(l.fieldId).catch(() => null);
+          if (!cancelled && f) setField(f);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [lobbyId]);
+
   const handleSubmit = () => {
-    // Show success modal
     setShowSuccessModal(true);
   };
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
-    // Navigate to main screen after showing success
-    try {
-      navigation.navigate('Main');
-    } catch (error) {
-      console.error('Navigation error in BookingStep3:', error);
-      // Fallback - go back to previous screen
-      navigation.goBack();
-    }
+    navigation.navigate('Main');
   };
 
   return (
-    <View style={{ 
-      flex: 1, 
-      backgroundColor: 'transparent', // Navigation handles backdrop now
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: 16 
-    }}>
-      <TouchableOpacity 
-        style={{ 
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0 
-        }}
-        onPress={() => navigation.goBack()}
-        activeOpacity={1}
-      />
-      
-      {/* Modal content */}
-      <View
-        className="bg-white rounded-2xl p-6 shadow-lg items-center relative"
-        style={{ width: '100%', maxWidth: 400, zIndex: 1 }}
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      onRequestClose={() => navigation.goBack()}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
       >
-        {/* Close button */}
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ position: 'absolute', top: 18, right: 18, zIndex: 10 }}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <MaterialCommunityIcons name="close" size={32} color="#758A80" />
-        </TouchableOpacity>
-        
-        {/* Title */}
-        <Text className="text-[28px] font-artico-bold text-text-primary mb-6 self-start">БРОНИРОВАНИЕ</Text>
-        
-        {/* Inputs */}
-        <Input
-          placeholder="Имя"
-          value={name}
-          onChangeText={setName}
-          className="w-full mb-4"
-        />
-        <Input
-          placeholder="Телефон"
-          value={phone}
-          onChangeText={setPhone}
-          className="w-full mb-6"
-        />
-        
-        {/* Details */}
-        <View className="w-full mb-6">
-          <Text className="font-manrope-bold text-[14px] text-[#758A80] mb-1">Дата и время</Text>
-          <Text className="text-[#758A80] font-manrope-light text-xs mb-3">{mockBookingDetails.date}</Text>
-          <Text className="font-manrope-bold text-[14px] text-[#758A80] mb-1">Стоимость</Text>
-          <Text className="text-[#758A80] font-manrope-light text-xs">{mockBookingDetails.price}</Text>
-        </View>
-        
-        {/* Button */}
-        <TouchableOpacity
-          className="bg-primary rounded-lg items-center py-4 w-full mt-2"
-          onPress={handleSubmit}
-        >
-          <Text className="text-white font-manrope-bold text-md">Отправить Заявку</Text>
-        </TouchableOpacity>
-      </View>
+        <View className="flex-1 items-center justify-center bg-black/50 px-4">
+          <TouchableOpacity
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            onPress={() => navigation.goBack()}
+            activeOpacity={1}
+            accessibilityRole="button"
+            accessibilityLabel="Закрыть"
+          />
 
-      {/* Success Modal */}
+          {/* Sheet content */}
+          <View
+            className="bg-white rounded-2xl p-6 relative"
+            style={{ width: '100%', maxWidth: 400 }}
+          >
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ position: 'absolute', top: 18, right: 18, zIndex: 10 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть"
+            >
+              <MaterialCommunityIcons name="close" size={28} color="#758A80" />
+            </TouchableOpacity>
+
+            <Text className="text-[24px] font-artico-bold text-text-primary mb-4 self-start">
+              БРОНИРОВАНИЕ
+            </Text>
+
+            {loading ? (
+              <View className="py-12">
+                <ActivityIndicator size="large" color="#45AF31" />
+              </View>
+            ) : (
+              <ScrollView keyboardShouldPersistTaps="handled" style={{ width: '100%' }}>
+                <View className="w-full mb-4">
+                  <Text className="font-manrope-bold text-sm text-text-primary mb-1">
+                    Поле
+                  </Text>
+                  <Text className="font-manrope-medium text-sm text-[#758A80]">
+                    {field?.name ?? '—'}
+                  </Text>
+                </View>
+
+                <View className="w-full mb-4">
+                  <Text className="font-manrope-bold text-sm text-text-primary mb-1">
+                    Действует до
+                  </Text>
+                  <Text className="font-manrope-medium text-sm text-[#758A80]">
+                    {formatExpiry(lobby?.expiresAt)}
+                  </Text>
+                </View>
+
+                <View className="w-full mb-6">
+                  <Text className="font-manrope-bold text-sm text-text-primary mb-1">
+                    Стоимость
+                  </Text>
+                  <Text className="font-manrope-medium text-sm text-[#758A80]">
+                    {lobby
+                      ? `${lobby.totalAmount.toLocaleString('ru-RU')} сум`
+                      : '—'}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  className="bg-primary rounded-lg items-center py-4 w-full"
+                  onPress={handleSubmit}
+                  activeOpacity={0.7}
+                  disabled={!lobby}
+                  style={{ opacity: lobby ? 1 : 0.5 }}
+                >
+                  <Text className="text-white font-manrope-bold text-base">
+                    Подтвердить бронирование
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+
       <SuccessModal
         visible={showSuccessModal}
         onClose={handleSuccessModalClose}
         title="ЗАЯВКА ОТПРАВЛЕНА"
         message="Ваша заявка на бронирование успешно отправлена. Мы свяжемся с вами в ближайшее время."
       />
-    </View>
+    </Modal>
   );
-}; 
+};

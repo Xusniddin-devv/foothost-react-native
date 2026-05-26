@@ -8,6 +8,9 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -140,14 +143,28 @@ export const PersonalDataScreen: React.FC<Props> = ({ navigation }) => {
       {/* Header */}
       <Header
         left={
-          <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            className="p-2"
+            accessibilityRole="button"
+            accessibilityLabel="Назад"
+          >
             <MaterialCommunityIcons name="arrow-left" size={28} color="#212121" />
           </TouchableOpacity>
         }
         title="ЛИЧНЫЕ ДАННЫЕ"
       />
 
-      <View className="flex-1 px-6 pt-6">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {/* Profile Picture - same as ProfileScreen */}
         <View className="items-center mb-8">
           <View className="w-32 h-32 rounded-full bg-white items-center justify-center border-4 border-primary" style={{ elevation: 4 }}>
@@ -199,7 +216,7 @@ export const PersonalDataScreen: React.FC<Props> = ({ navigation }) => {
             />
           </View>
           <View className="p-4 border-b border-gray-100">
-            <Text className="text-xs text-gray-500 mb-1">Username</Text>
+            <Text className="text-xs text-gray-500 mb-1">Никнейм</Text>
             <TextInput
               value={formData.username}
               onChangeText={(username) => setFormData((prev) => ({ ...prev, username }))}
@@ -251,39 +268,43 @@ export const PersonalDataScreen: React.FC<Props> = ({ navigation }) => {
             className={`mt-3 rounded-lg py-3 ${changingPassword ? 'bg-gray-400' : 'bg-primary'}`}
             onPress={() => void handleChangePassword()}
             disabled={changingPassword}
+            activeOpacity={0.7}
           >
             {changingPassword ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text className="text-white text-center text-sm font-bold">Изменить пароль</Text>
+              <Text className="text-white text-center text-sm font-manrope-bold">Изменить пароль</Text>
             )}
           </TouchableOpacity>
           </View>
 
         {/* About Us Section */}
-        <TouchableOpacity 
+        <TouchableOpacity
           className="bg-white rounded-lg p-4 flex-row items-center justify-between border border-gray-200"
           onPress={handleAboutUs}
+          activeOpacity={0.7}
         >
-          <Text className="text-base text-text-primary">О НАС</Text>
+          <Text className="text-base text-text-primary font-manrope-medium">О НАС</Text>
           <MaterialCommunityIcons name="chevron-right" size={20} color="#757575" />
         </TouchableOpacity>
 
-        {/* Save Button - at the bottom */}
-        <View className="flex-1 justify-end pb-6">
-          <TouchableOpacity 
+        {/* Save Button */}
+        <View className="mt-6 mb-2">
+          <TouchableOpacity
             className={`rounded-lg py-4 ${saving ? 'bg-gray-400' : 'bg-primary'}`}
             onPress={handleSave}
             disabled={saving}
+            activeOpacity={0.7}
           >
             {saving ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text className="text-white text-center text-lg font-bold">Сохранить</Text>
+              <Text className="text-white text-center text-lg font-manrope-bold">Сохранить</Text>
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
-}; 
+};

@@ -5,7 +5,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  RefreshControl,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -141,7 +143,6 @@ import {
 
 // Import SVG files
 import Logo from '../../assets/images/logo_white.svg';
-import Bell from '../../assets/images/homepage/bell-white.svg';
 const FALLBACK_FIELD_IMAGE = require('../../assets/images/homepage/homepage.png');
 
 
@@ -157,6 +158,7 @@ export const HomeScreen: React.FC = () => {
   const tier = getRatingTier(userRating);
   const [topField, setTopField] = useState<Field | null>(null);
   const [newsFeed, setNewsFeed] = useState<News[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -167,7 +169,7 @@ export const HomeScreen: React.FC = () => {
       setTopField(fields[0] ?? null);
       setNewsFeed(news);
     } catch {
-      /* silent; user can pull to refresh once we expose a RefreshControl here */
+      // Network/parse failures are surfaced via empty states; user can pull to refresh.
     }
   }, []);
 
@@ -175,24 +177,32 @@ export const HomeScreen: React.FC = () => {
     loadData();
   }, [loadData]);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [loadData]);
+
   const displayName = user
     ? `${user.firstName} ${user.lastName}`.trim().toUpperCase() || 'ИГРОК'
     : 'ИГРОК FOOTHOST';
-  const avatarUri = user?.avatarUrl ?? 'https://i.imgflip.com/1ur9b0.jpg';
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#45AF31" />
+        }
+      >
         {/* Green Top Section */}
-        <View 
+        <View
           className="bg-primary px-5"
           style={{ paddingTop: insets.top + 16, paddingBottom: 60 }}
         >
           <View className="flex-row items-center justify-between mb-4">
             <Logo width={100} height={40} />
-            <TouchableOpacity>
-              <Bell width={24} height={24} color="#FFF" />
-            </TouchableOpacity>
+            <View style={{ width: 24, height: 24 }} />
           </View>
         </View>
 
@@ -204,11 +214,15 @@ export const HomeScreen: React.FC = () => {
             {/* Avatar with level badge overlapping */}
             <View className="relative mr-4">
               <View className="w-[110px] h-[110px] rounded-full border-4 border-white bg-[#ececec] overflow-hidden justify-center items-center">
-                <Image
-                  source={{ uri: avatarUri }}
-                  className="w-full h-full"
-                  resizeMode="cover"
-                />
+                {user?.avatarUrl ? (
+                  <Image
+                    source={{ uri: user.avatarUrl }}
+                    className="w-full h-full"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <MaterialCommunityIcons name="account" size={80} color="#9E9E9E" />
+                )}
               </View>
               {/* FACEIT-style rating arc — bottom-right */}
               <View className="absolute -bottom-3 -right-3 z-10">
@@ -238,13 +252,11 @@ export const HomeScreen: React.FC = () => {
           </View>
 
           {/* Action Buttons */}
-          <View className="flex-row justify-between mb-4">
-            <TouchableOpacity className="flex-1 bg-primary py-3.5 rounded-lg mr-2 items-center justify-center">
-              <Text className="text-white font-manrope-bold text-[15px]">Найти матч</Text>
-            </TouchableOpacity>
+          <View className="mb-4">
             <TouchableOpacity
-              className="flex-1 bg-primary py-3.5 rounded-lg ml-2 items-center justify-center"
+              className="bg-primary py-3.5 rounded-lg items-center justify-center"
               onPress={() => navigation.navigate('StadiumList')}
+              activeOpacity={0.8}
             >
               <Text className="text-white font-manrope-bold text-[15px]">Создать лобби</Text>
             </TouchableOpacity>
@@ -278,24 +290,12 @@ export const HomeScreen: React.FC = () => {
               </Text>
             </View>
           )}
-
-          {/* Pagination Dots */}
-          <View className="flex-row justify-center mt-4 space-x-2">
-            <View className="w-2 h-2 bg-primary rounded-full" />
-            <View className="w-2 h-2 bg-gray-300 rounded-full" />
-            <View className="w-2 h-2 bg-gray-300 rounded-full" />
-            <View className="w-2 h-2 bg-gray-300 rounded-full" />
-            <View className="w-2 h-2 bg-gray-300 rounded-full" />
-          </View>
         </Container>
 
         {/* News Section */}
         <View className="mb-4">
           <View className="px-5 mb-3">
-            <SectionHeader
-              title="NEWS"
-              onViewAll={() => console.log('View all news')}
-            />
+            <SectionHeader title="НОВОСТИ" />
           </View>
 
           <View className="px-5">
@@ -311,10 +311,9 @@ export const HomeScreen: React.FC = () => {
             ) : (
               <View className="space-y-3">
                 {newsFeed.slice(0, 5).map((item) => (
-                  <TouchableOpacity
+                  <View
                     key={item.id}
                     className="overflow-hidden rounded-xl border border-[#e7e7e7] bg-white"
-                    onPress={() => console.log('News pressed', item.id)}
                   >
                     {item.imageUrl ? (
                       <Image
@@ -335,7 +334,7 @@ export const HomeScreen: React.FC = () => {
                         {item.body}
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                  </View>
                 ))}
               </View>
             )}

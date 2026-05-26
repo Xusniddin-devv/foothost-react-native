@@ -19,6 +19,14 @@ import type { Field } from '../types/api';
 
 const FALLBACK_IMAGE = require('../../assets/images/homepage/homepage.png');
 
+function pluralizeStadiums(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'стадион';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'стадиона';
+  return 'стадионов';
+}
+
 type StadiumListScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
   'StadiumList'
@@ -95,27 +103,18 @@ export const StadiumListScreen: React.FC<Props> = ({
             </TouchableOpacity>
           }
           title="СПИСОК ПОЛЕЙ"
-          right={
-            <TouchableOpacity>
-              <MaterialCommunityIcons
-                name="dots-vertical"
-                size={28}
-                color="#212121"
-              />
-            </TouchableOpacity>
-          }
         />
 
         <View className="items-center pb-2 -mt-2">
           <Text className="text-gray-600 font-manrope-medium text-xs">
-            {loading ? 'Загрузка…' : `${fields.length} стадион(ов)`}
+            {loading ? 'Загрузка…' : `${fields.length} ${pluralizeStadiums(fields.length)}`}
           </Text>
         </View>
       </View>
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#1F7A1F" />
+          <ActivityIndicator size="large" color="#45AF31" />
         </View>
       ) : (
         <ScrollView
@@ -125,7 +124,7 @@ export const StadiumListScreen: React.FC<Props> = ({
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#1F7A1F"
+              tintColor="#45AF31"
             />
           }
         >
@@ -168,9 +167,10 @@ export const StadiumListScreen: React.FC<Props> = ({
                   <TouchableOpacity
                     className="bg-primary py-3 items-center"
                     onPress={() => handleDetailPress(item.id)}
+                    activeOpacity={0.7}
                     style={{ marginTop: 0 }}
                   >
-                    <Text className="text-white text-base font-bold">
+                    <Text className="text-white text-base font-manrope-bold">
                       Подробнее
                     </Text>
                   </TouchableOpacity>

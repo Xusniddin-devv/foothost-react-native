@@ -10,6 +10,8 @@ import {
   Alert,
   Linking,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -173,6 +175,10 @@ export const PaymentScreen: React.FC<Props> = ({ navigation, route }) => {
       </View>
 
       {/* Payment sheet */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
       <View
         className="flex-1 bg-white"
         style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20 }}
@@ -182,10 +188,12 @@ export const PaymentScreen: React.FC<Props> = ({ navigation, route }) => {
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Назад"
           >
             <MaterialCommunityIcons name="chevron-left" size={28} color="#212121" />
           </TouchableOpacity>
-          <Text className="flex-1 text-center font-manrope-bold text-base text-text-primary">
+          <Text className="flex-1 text-center font-artico-bold text-[20px] text-text-primary">
             ОПЛАТА
           </Text>
           {/* Spacer to center title */}
@@ -249,12 +257,16 @@ export const PaymentScreen: React.FC<Props> = ({ navigation, route }) => {
         <View className="absolute bottom-0 left-0 right-0 px-4 pb-8 pt-2 bg-white">
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            className="bg-primary rounded-xl py-4 items-center"
+            className="border border-gray-300 rounded-xl py-4 items-center bg-white"
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Отмена"
           >
-            <Text className="text-white font-manrope-bold text-base">Отмена</Text>
+            <Text className="text-text-primary font-manrope-bold text-base">Отмена</Text>
           </TouchableOpacity>
         </View>
       </View>
+      </KeyboardAvoidingView>
 
       {/* Success modal */}
       <SuccessModal
