@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, SafeAreaView, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Container, Header } from '../components/common';
-import { SuccessModal } from '../components/common/SuccessModal';
 // SVGs are assumed to be set up correctly
 import TypeOfPitchSvg from '../../assets/images/booking/typeofPitch.svg';
 import TypeOfFieldSvg from '../../assets/images/booking/typeofField.svg';
@@ -41,9 +40,6 @@ const InfoCard = ({ icon, label, value }: { icon: React.ReactNode, label: string
 );
 
 export const TournamentDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const tournament = route?.params?.tournament;
 
   if (!tournament) {
@@ -62,22 +58,6 @@ export const TournamentDetailsScreen: React.FC<Props> = ({ navigation, route }) 
       </SafeAreaView>
     );
   }
-
-  const handleJoinTournament = () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    Alert.alert(
-      'Скоро',
-      'Запись на турниры будет доступна в одном из ближайших обновлений.',
-      [{ text: 'OK', onPress: () => setIsSubmitting(false) }],
-    );
-  };
-
-  const handleCloseModal = () => {
-    setShowSuccessModal(false);
-    // Navigate back to tournaments list
-    navigation.goBack();
-  };
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -213,29 +193,14 @@ export const TournamentDetailsScreen: React.FC<Props> = ({ navigation, route }) 
         </Container>
       </ScrollView>
 
-      {/* Join Tournament Button */}
+      {/* Join Tournament Button — disabled until backend support lands */}
       <View className="absolute bottom-0 left-0 right-0 px-4 pt-2 pb-6">
-        <TouchableOpacity
-          className={`rounded-xl py-4 items-center ${
-            !isSubmitting ? 'bg-primary' : 'bg-gray-300'
-          }`}
-          onPress={handleJoinTournament}
-          disabled={isSubmitting}
-          activeOpacity={0.7}
-        >
+        <View className="rounded-xl py-4 items-center bg-gray-300">
           <Text className="text-white font-manrope-bold text-base">
-            {isSubmitting ? 'Присоединение...' : 'Присоединиться к турниру'}
+            Регистрация скоро
           </Text>
-        </TouchableOpacity>
+        </View>
       </View>
-
-      {/* Success Modal */}
-      <SuccessModal
-        visible={showSuccessModal}
-        onClose={handleCloseModal}
-        title="УСПЕШНО ПРИСОЕДИНИЛИСЬ"
-        message="Вы успешно присоединились к турниру. Ожидайте подтверждения от организатора."
-      />
     </SafeAreaView>
   );
-}; 
+};

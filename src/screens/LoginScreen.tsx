@@ -41,10 +41,14 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     }
     setLoading(true);
     try {
-      await login({
+      const me = await login({
         phone: formData.phoneNumber.trim(),
         password: formData.password,
       });
+      if (!me) {
+        Alert.alert('Ошибка входа', 'Не удалось получить профиль. Попробуйте снова.');
+        return;
+      }
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (err) {
       Alert.alert('Ошибка входа', getApiErrorMessage(err, 'Неверный телефон или пароль'));

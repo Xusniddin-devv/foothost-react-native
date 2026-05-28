@@ -285,6 +285,20 @@ export const BookingStep2Screen: React.FC<Props> = ({ navigation, route }) => {
     onPlayerLeft: () => {
       if (lobbyId) lobbiesApi.players(lobbyId).then(setPlayers).catch(() => undefined);
     },
+    onPaid: () => {
+      if (!lobbyId) return;
+      paymentsApi
+        .status(lobbyId)
+        .then((s) => setPayments(s.payments))
+        .catch(() => undefined);
+    },
+    onPaymentUpdated: () => {
+      if (!lobbyId) return;
+      paymentsApi
+        .status(lobbyId)
+        .then((s) => setPayments(s.payments))
+        .catch(() => undefined);
+    },
     onLobbyUpdated: () => {
       if (lobbyId) lobbiesApi.get(lobbyId).then(setLobby).catch(() => undefined);
     },

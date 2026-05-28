@@ -46,4 +46,13 @@ export const lobbySocket = {
     socket?.disconnect();
     socket = null;
   },
+
+  /**
+   * Tears down any existing connection so the next `joinRoom` re-authenticates
+   * with the current token from storage. Call after login or token refresh.
+   */
+  reset(): void {
+    socket?.disconnect();
+    socket = null;
+  },
 };

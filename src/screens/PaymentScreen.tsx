@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  AppState,
+  type AppStateStatus,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -60,6 +62,8 @@ export const PaymentScreen: React.FC<Props> = ({ navigation, route }) => {
   const [remainingAmount, setRemainingAmount] = useState(0);
   const [nextShare, setNextShare] = useState(amountParam ?? 0);
   const [amountInput, setAmountInput] = useState('');
+  const [awaitingPayment, setAwaitingPayment] = useState(false);
+  const initiatedPaymentIdRef = useRef<string | null>(null);
 
   const isCreator = Boolean(user?.id && lobby?.creatorId && user.id === lobby.creatorId);
 
@@ -98,6 +102,39 @@ export const PaymentScreen: React.FC<Props> = ({ navigation, route }) => {
     if (suggested > 0) setAmountInput(String(suggested));
   }, [isCreator, nextShare, remainingAmount]);
 
+  const checkPaymentStatus = useCallback(async () => {
+    if (!lobbyId) return;
+    try {
+      const status = await paymentsApi.status(lobbyId);
+      setRemainingAmount(status.remainingAmount);
+      setNextShare(status.nextShare);
+      const initiatedId = initiatedPaymentIdRef.current;
+      const target = initiatedId
+        ? status.payments.find((p) => p.id === initiatedId)
+        : status.payments.find((p) => p.userId === user?.id);
+      if (!target) return;
+      if (target.status === 'paid') {
+        setAwaitingPayment(false);
+        initiatedPaymentIdRef.current = null;
+        setSuccessVisible(true);
+      } else if (target.status === 'failed') {
+        setAwaitingPayment(false);
+        initiatedPaymentIdRef.current = null;
+        Alert.alert('Платёж не прошёл', 'Попробуйте ещё раз другим способом.');
+      }
+    } catch {
+      // silent; user can retry via banner
+    }
+  }, [lobbyId, user?.id]);
+
+  useEffect(() => {
+    if (!awaitingPayment) return;
+    const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') void checkPaymentStatus();
+    });
+    return () => sub.remove();
+  }, [awaitingPayment, checkPaymentStatus]);
+
   const handleSelect = async (_key: string) => {
     if (!lobbyId) {
       setSuccessVisible(true);
@@ -107,12 +144,20 @@ export const PaymentScreen: React.FC<Props> = ({ navigation, route }) => {
     try {
       const parsed = Number((amountInput || '').replace(/[^\d]/g, ''));
       const amount = Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-      const { redirectUrl } = await paymentsApi.initiate(lobbyId, amount);
+      const { redirectUrl, paymentId } = await paymentsApi.initiate(lobbyId, amount);
+      initiatedPaymentIdRef.current = paymentId ?? null;
       if (redirectUrl) {
         const can = await Linking.canOpenURL(redirectUrl);
-        if (can) await Linking.openURL(redirectUrl);
+        if (can) {
+          await Linking.openURL(redirectUrl);
+          setAwaitingPayment(true);
+        } else {
+          Alert.alert('Ошибка', 'Не удалось открыть платёжное приложение.');
+        }
+      } else {
+        // No redirect — already settled server-side
+        setSuccessVisible(true);
       }
-      setSuccessVisible(true);
     } catch (err) {
       Alert.alert('Ошибка оплаты', getApiErrorMessage(err, 'Не удалось инициировать платёж'));
     } finally {
@@ -252,6 +297,24 @@ export const PaymentScreen: React.FC<Props> = ({ navigation, route }) => {
             </TouchableOpacity>
           ))}
         </View>
+
+        {awaitingPayment ? (
+          <View className="mx-4 mt-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+            <Text className="font-manrope-bold text-sm text-text-primary">
+              Ожидаем подтверждение оплаты
+            </Text>
+            <Text className="font-manrope-medium text-xs text-gray-600 mt-1">
+              Вернитесь в приложение после завершения оплаты — статус обновится автоматически.
+            </Text>
+            <TouchableOpacity
+              onPress={() => void checkPaymentStatus()}
+              className="mt-2 self-start rounded-lg bg-primary px-3 py-1.5"
+              activeOpacity={0.7}
+            >
+              <Text className="font-manrope-bold text-xs text-white">Проверить статус</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* Cancel button */}
         <View className="absolute bottom-0 left-0 right-0 px-4 pb-8 pt-2 bg-white">

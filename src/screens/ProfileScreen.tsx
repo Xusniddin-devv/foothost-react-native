@@ -103,31 +103,44 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [enterLobbyCode, setEnterLobbyCode] = useState('');
   const [enterLobbyLoading, setEnterLobbyLoading] = useState(false);
   useEffect(() => {
-    lobbiesApi.mine().then(async (data) => {
-      setMyLobbies(data);
-      const ids = [...new Set(data.map((l) => l.fieldId))];
-      const fetched = await Promise.all(ids.map((id) => fieldsApi.get(id).catch(() => null)));
-      const playerCounts = await Promise.all(
-        data.map((lobby) =>
-          lobbiesApi
-            .players(lobby.id)
-            .then((players) => ({
-              lobbyId: lobby.id,
-              count: players.filter((p) => p.status === 'approved').length,
-            }))
-            .catch(() => ({ lobbyId: lobby.id, count: 0 })),
-        ),
-      );
-      const map: Record<string, Field> = {};
-      fetched.forEach((f) => { if (f) map[f.id] = f; });
-      setLobbyFields(map);
-      setLobbyJoinedCount(
-        playerCounts.reduce<Record<string, number>>((acc, entry) => {
-          acc[entry.lobbyId] = entry.count;
-          return acc;
-        }, {}),
-      );
-    }).catch(() => {});
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await lobbiesApi.mine();
+        if (cancelled) return;
+        setMyLobbies(data);
+        const ids = [...new Set(data.map((l) => l.fieldId))];
+        const [fetched, playerCounts] = await Promise.all([
+          Promise.all(ids.map((id) => fieldsApi.get(id).catch(() => null))),
+          Promise.all(
+            data.map((lobby) =>
+              lobbiesApi
+                .players(lobby.id)
+                .then((players) => ({
+                  lobbyId: lobby.id,
+                  count: players.filter((p) => p.status === 'approved').length,
+                }))
+                .catch(() => ({ lobbyId: lobby.id, count: 0 })),
+            ),
+          ),
+        ]);
+        if (cancelled) return;
+        const map: Record<string, Field> = {};
+        fetched.forEach((f) => { if (f) map[f.id] = f; });
+        setLobbyFields(map);
+        setLobbyJoinedCount(
+          playerCounts.reduce<Record<string, number>>((acc, entry) => {
+            acc[entry.lobbyId] = entry.count;
+            return acc;
+          }, {}),
+        );
+      } catch {
+        // silent
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const tier = getPlayerTier(user?.rating ?? 0);

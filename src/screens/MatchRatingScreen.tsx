@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
 import { Header, SuccessModal } from '../components/common';
+import { reviewsApi } from '../services/api/reviews';
+import { getApiErrorMessage } from '../services/api/client';
 import ChelseaSvg from '../../assets/images/profile/chelsea.svg';
 import MyuSvg from '../../assets/images/profile/MYU.svg';
 type MatchRatingScreenNavigationProp = StackNavigationProp<
@@ -69,10 +71,19 @@ export const MatchRatingScreen: React.FC<Props> = ({ navigation, route }) => {
   const [matchRating, setMatchRating] = useState(3);
   const [fieldRating, setFieldRating] = useState(3);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    // Show success modal
-    setShowSuccessModal(true);
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await reviewsApi.create(matchId, { matchRating, fieldRating });
+      setShowSuccessModal(true);
+    } catch (err) {
+      Alert.alert('Ошибка', getApiErrorMessage(err, 'Не удалось отправить оценку'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSuccessModalClose = () => {
@@ -157,11 +168,16 @@ export const MatchRatingScreen: React.FC<Props> = ({ navigation, route }) => {
       {/* Submit Button */}
       <View className="px-4 pb-6">
         <TouchableOpacity
-          className="bg-primary rounded-lg py-4"
+          className={`rounded-lg py-4 ${submitting ? 'bg-gray-400' : 'bg-primary'}`}
           onPress={handleSubmit}
+          disabled={submitting}
           activeOpacity={0.7}
         >
-          <Text className="text-white text-center text-lg font-manrope-bold">Отправить</Text>
+          {submitting ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <Text className="text-white text-center text-lg font-manrope-bold">Отправить</Text>
+          )}
         </TouchableOpacity>
       </View>
 

@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -16,6 +17,7 @@ import { RootStackParamList } from '../types/navigation';
 import { SuccessModal } from '../components/common';
 import { lobbiesApi } from '../services/api/lobbies';
 import { fieldsApi } from '../services/api/fields';
+import { getApiErrorMessage } from '../services/api/client';
 import type { Field, Lobby } from '../types/api';
 
 type BookingStep3ScreenNavigationProp = StackNavigationProp<
@@ -48,6 +50,7 @@ export const BookingStep3Screen: React.FC<Props> = ({ navigation, route }) => {
   const [field, setField] = useState<Field | null>(null);
   const [loading, setLoading] = useState<boolean>(!!lobbyId);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!lobbyId) {
@@ -73,8 +76,18 @@ export const BookingStep3Screen: React.FC<Props> = ({ navigation, route }) => {
     };
   }, [lobbyId]);
 
-  const handleSubmit = () => {
-    setShowSuccessModal(true);
+  const handleSubmit = async () => {
+    if (!lobbyId || submitting) return;
+    setSubmitting(true);
+    try {
+      const updated = await lobbiesApi.publish(lobbyId);
+      setLobby(updated);
+      setShowSuccessModal(true);
+    } catch (err) {
+      Alert.alert('Ошибка', getApiErrorMessage(err, 'Не удалось подтвердить бронирование'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSuccessModalClose = () => {
@@ -160,12 +173,16 @@ export const BookingStep3Screen: React.FC<Props> = ({ navigation, route }) => {
                   className="bg-primary rounded-lg items-center py-4 w-full"
                   onPress={handleSubmit}
                   activeOpacity={0.7}
-                  disabled={!lobby}
-                  style={{ opacity: lobby ? 1 : 0.5 }}
+                  disabled={!lobby || submitting}
+                  style={{ opacity: !lobby || submitting ? 0.5 : 1 }}
                 >
-                  <Text className="text-white font-manrope-bold text-base">
-                    Подтвердить бронирование
-                  </Text>
+                  {submitting ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <Text className="text-white font-manrope-bold text-base">
+                      Подтвердить бронирование
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </ScrollView>
             )}

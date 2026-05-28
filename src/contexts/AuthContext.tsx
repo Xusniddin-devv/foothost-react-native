@@ -28,7 +28,7 @@ export interface AuthContextValue extends AuthState {
   verifyOtp: (dto: VerifyOtpDto) => Promise<User>;
   login: (dto: LoginDto) => Promise<User>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<User | null>;
+  refreshUser: () => Promise<User>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -77,6 +77,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const afterTokens = useCallback(
     async (accessToken: string, refreshToken?: string): Promise<User> => {
       await tokenStorage.save(accessToken, refreshToken);
+      // Drop any socket established under the previous (or anonymous) token
+      // so the next joinRoom() reconnects authenticated as this user.
+      lobbySocket.reset();
       const me = await authApi.me();
       setUser(me);
       return me;
@@ -124,13 +127,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const refreshUser = useCallback(async () => {
-    try {
-      const me = await authApi.me();
-      setUser(me);
-      return me;
-    } catch {
-      return null;
-    }
+    const me = await authApi.me();
+    setUser(me);
+    return me;
   }, []);
 
   const value = useMemo<AuthContextValue>(
